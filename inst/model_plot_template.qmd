@@ -1,0 +1,1779 @@
+---
+title: "Model plots"
+subtitle: "`r params$subtitle`"
+date: today
+format:
+  dashboard:
+    orientation: rows
+    theme: cosmo
+    embed-resources: true
+params:
+  model_path: NULL
+  validations_path: NULL
+  selection: NULL
+  graph_params: NULL
+  subtitle: ""
+---
+
+```{=html}
+<style>
+.navbar { background-color: #6c757d ; }
+.navbar, .navbar * { color: #fff ; }
+.navbar .nav-link.active, .navbar .nav-item.active > .nav-link { background-color: #495057 !important; color: #fff !important; border-color: transparent !important; }
+.tab-content .card { border: none ; box-shadow: none ; }
+.tab-content .card .bslib-full-screen-enter { display: none !important; }
+</style>
+```
+
+```{r setup}
+#| include: false
+knitr::opts_chunk$set(out.height = "100%", out.width = "100%", echo = FALSE)
+knitr::opts_knit$set(progress = FALSE)
+library(plotly)
+full_model <- readRDS(params$model_path)
+selection <- params$selection
+
+n_comps <- full_model$method$ncomp
+components <- 1:n_comps
+opt_comp <- full_model$final_ncomp
+final_model <- full_model$final_model
+
+wavelengths <- as.double(colnames(final_model$model$weights))
+n_observations <- final_model$model$n_observations
+xaxis_label <- switch(full_model$preprocess$device,
+  proxiscout  = "Wavenumber (cm<sup>-1</sup>)",
+  proximate   = "Wavelength (nm)",
+  ""
+)
+xaxis_spectral <- list(title = xaxis_label, titlefont = list(color = "#7f7f7f"))
+if (full_model$preprocess$device == "proxiscout") {
+  xaxis_spectral$autorange <- "reversed"
+}
+cal_stats <- final_model$calibration_statistics_all
+observation_names <- paste("Observation", cal_stats$Sample_index)
+Y <- cal_stats$Target
+colrs <- rainbow(n_comps)
+# Obtain the name of the spectrum that was used if the model was built with a
+# formula, otherwise use `spc`
+if (is.null(full_model$formula)) {
+  spc_name <- "spc"
+} else {
+  spc_name <- tail(all.vars(full_model$formula), n = 1)
+}
+
+steps <- list()
+for (i in components) {
+  step <- list(
+    args = list("visible", rep(FALSE, n_comps)),
+    method = "restyle",
+    label = paste("Component", i),
+    value = as.character(i)
+  )
+  step$args[[2]][i] <- TRUE
+  steps[[i]] <- step
+}
+sliders <- list(list(
+  currentvalue = list(
+    prefix = "",
+    font = list(color = "black", xanchor = "left")
+  ),
+  active = opt_comp - 1,
+  steps = steps,
+  pad = list(t = 50, r = 50, b = 0, l = 50)
+))
+
+given_params <- params$graph_params
+if (length(given_params) > 0) {
+  all_layout_params <- names(schema(FALSE)$layout$layoutAttributes)
+  all_plotly_params <- names(schema(FALSE)$traces$scatter$attributes)
+  dropped_params <- c(
+    intersect(all_layout_params, all_plotly_params),
+    "p", "sliders", "x", "x0", "dx", "y", "y0", "dy", "visible", "type", "name",
+    "hovertext", "text", "mode"
+  )
+  all_layout_params <- all_layout_params[!all_layout_params %in% dropped_params]
+  all_plotly_params <- all_plotly_params[!all_plotly_params %in% dropped_params]
+  layout_params <- given_params[names(given_params) %in% all_layout_params]
+  plotly_params <- given_params[names(given_params) %in% all_plotly_params]
+} else {
+  layout_params <- list()
+  plotly_params <- list()
+}
+
+validations <- if (!is.null(params$validations_path)) readRDS(params$validations_path) else NULL
+val_refs <- validations$reference
+
+plotly_build2 <- function(...) {
+  p <- plotly_build(...)
+  p$x[c("attrs", "visdat", "cur_data")] <- NULL
+  p
+}
+
+# Has the full model any cross-validation?
+has_val <- full_model$control$validation_type != "none"
+
+# Get header selection
+header_selection <- 1:4 %in% floor(selection)
+
+# Get plot selections
+selection <- 10 * selection
+spectral_selection <- 11:19 %in% selection
+if (10 %in% selection) spectral_selection <- rep(TRUE, length(spectral_selection))
+cv_selection <- 21:27 %in% selection & has_val
+if (20 %in% selection & has_val) cv_selection <- rep(TRUE, length(cv_selection))
+regression_selection <- 31:37 %in% selection
+if (30 %in% selection) regression_selection <- rep(TRUE, length(regression_selection))
+val_selection <- 41:42 %in% selection & !is.null(validations)
+if (40 %in% selection & !is.null(validations)) val_selection <- rep(TRUE, length(val_selection))
+
+# Check computability of certain plots/headers
+header_selection[2] <- header_selection[2] && has_val
+spectral_selection[1] <- spectral_selection[1] && !is.null(full_model$input_data$data[[spc_name]])
+spectral_selection[2] <- spectral_selection[2] && !is.null(full_model$preprocessed_X)
+cv_selection[2:7] <- cv_selection[2:7] & any(full_model$control$validation_type == c("kfold", "loo"))
+header_selection[4] <- header_selection[4] && !is.null(validations)
+val_selection[1:2] <- val_selection[1:2] & !is.null(val_refs)
+```
+
+
+```{r}
+#| output: asis
+if (header_selection[1]) cat("# Spectral plots\n\n## Column {.tabset}\n\n")
+```
+
+
+```{r}
+#| output: asis
+if (spectral_selection[1]) cat("### Raw Spectra\n\n")
+```
+
+```{r}
+#| eval: !expr spectral_selection[1]
+raw_spectra <- full_model$input_data$data[[spc_name]][cal_stats$Sample_index, ]
+
+to_plot <- data.frame(
+  wavelengths = as.double(colnames(raw_spectra)),
+  spec = as.vector(t(raw_spectra)),
+  name = rep(
+    paste("Spectrum", cal_stats$Sample_index),
+    each = ncol(raw_spectra)
+  )
+)
+
+to_plot$name <- factor(to_plot$name, levels = paste("Spectrum", cal_stats$Sample_index))
+
+fig <- do.call(
+  "plot_ly",
+  c(
+    plotly_params["marker" != names(plotly_params)],
+    list(
+      data = to_plot,
+      type = "scatter",
+      mode = "lines",
+      x = ~wavelengths,
+      y = ~spec,
+      split = ~name,
+      name = ~name,
+      line = list(width = 1, simplify = TRUE)
+    )
+  )
+)
+
+fig <- do.call(
+  "layout",
+  c(
+    layout_params,
+    list(
+      p = fig,
+      xaxis = xaxis_spectral,
+      yaxis = list(title = "Raw Spectrum", titlefont = list(color = "#7f7f7f"))
+    )
+  )
+)
+
+plotly_build2(fig)
+```
+
+```{r}
+#| output: asis
+if (spectral_selection[2]) cat("### Preprocessed Spectra\n\n")
+```
+
+```{r}
+#| eval: !expr spectral_selection[2]
+# Reduce resolution of preprocessed spectrum for decreased file size
+prepro_spc <- full_model$preprocessed_X
+recipe <- full_model$preprocess$preprocessing_order
+
+to_plot <- data.frame(
+  wavelengths = as.double(colnames(prepro_spc)),
+  spec = as.vector(t(prepro_spc)),
+  name = rep(
+    paste("Spectrum", cal_stats$Sample_index),
+    each = ncol(prepro_spc)
+  )
+)
+
+to_plot$name <- factor(to_plot$name, levels = paste("Spectrum", cal_stats$Sample_index))
+
+fig <- plot_ly(type = "scatter", mode = "lines")
+fig <- do.call(
+  "add_lines",
+  c(
+    plotly_params["marker" != names(plotly_params)],
+    list(
+      p = fig,
+      data = to_plot,
+      x = ~wavelengths,
+      y = ~spec,
+      split = ~name,
+      name = ~name,
+      line = list(width = 1, simplify = TRUE)
+    )
+  )
+)
+fig <- do.call(
+  "add_text",
+  list(
+    p = fig,
+    x = unname(quantile(to_plot$wavelengths, probs = 0.03)),
+    y = max(to_plot$spec),
+    text = recipe,
+    textposition = "bottom right",
+    showlegend = F,
+    hoverinfo = "text",
+    fillcolor = "red"
+  )
+)
+
+fig <- do.call(
+  "layout",
+  c(
+    layout_params,
+    list(
+      p = fig,
+      xaxis = xaxis_spectral,
+      yaxis = list(
+        title = "Preprocessed Spectrum",
+        titlefont = list(color = "#7f7f7f")
+      )
+    )
+  )
+)
+plotly_build2(fig)
+```
+
+
+```{r}
+#| output: asis
+if (spectral_selection[3]) cat("### Weights\n\n")
+```
+
+```{r}
+#| eval: !expr spectral_selection[3]
+to_plot <- data.frame(
+  wavelengths = wavelengths,
+  weights = as.vector(t(final_model$model$weights)),
+  name = rep(
+    paste("Component", 1:n_comps),
+    each = ncol(final_model$model$weights)
+  )
+)
+
+to_plot$name <- factor(to_plot$name, levels = paste("Component", 1:n_comps))
+
+fig <- do.call(
+  "plot_ly",
+  c(
+    plotly_params["marker" != names(plotly_params)],
+    list(
+      data = to_plot,
+      type = "scatter",
+      mode = "lines",
+      x = ~wavelengths,
+      y = ~weights,
+      split = ~name,
+      name = ~name,
+      line = list(width = 1, simplify = TRUE)
+    )
+  )
+)
+fig <- do.call(
+  "layout",
+  c(
+    layout_params,
+    list(
+      p = fig,
+      xaxis = xaxis_spectral,
+      yaxis = list(title = "Weight", titlefont = list(color = "#7f7f7f"))
+    )
+  )
+)
+plotly_build2(fig)
+```
+
+```{r}
+#| output: asis
+if (spectral_selection[4]) cat("### Loadings\n\n")
+```
+
+```{r}
+#| eval: !expr spectral_selection[4]
+to_plot <- data.frame(
+  wavelengths = wavelengths,
+  loadings = as.vector(t(final_model$model$x_loadings)),
+  name = rep(
+    paste("Component", 1:n_comps),
+    each = ncol(final_model$model$x_loadings)
+  )
+)
+
+to_plot$name <- factor(to_plot$name, levels = paste("Component", 1:n_comps))
+
+fig <- do.call(
+  "plot_ly",
+  c(
+    plotly_params["marker" != names(plotly_params)],
+    list(
+      data = to_plot,
+      type = "scatter",
+      mode = "lines",
+      x = ~wavelengths,
+      y = ~loadings,
+      split = ~name,
+      name = ~name,
+      line = list(width = 1, simplify = TRUE)
+    )
+  )
+)
+fig <- do.call(
+  "layout",
+  c(
+    layout_params,
+    list(
+      p = fig,
+      xaxis = xaxis_spectral,
+      yaxis = list(title = "Loading", titlefont = list(color = "#7f7f7f"))
+    )
+  )
+)
+plotly_build2(fig)
+```
+
+```{r}
+#| output: asis
+if (spectral_selection[5]) cat("### Coefficients\n\n")
+```
+
+```{r}
+#| eval: !expr spectral_selection[5]
+to_plot <- data.frame(
+  wavelengths = wavelengths,
+  coeff = as.vector(t(final_model$model$coefficients)),
+  name = rep(
+    paste("Component", 1:n_comps),
+    each = ncol(final_model$model$coefficients)
+  )
+)
+
+to_plot$name <- factor(to_plot$name, levels = paste("Component", 1:n_comps))
+
+fig <- do.call(
+  "plot_ly",
+  c(
+    plotly_params["marker" != names(plotly_params)],
+    list(
+      data = to_plot,
+      type = "scatter",
+      mode = "lines",
+      x = ~wavelengths,
+      y = ~coeff,
+      split = ~name,
+      name = ~name,
+      line = list(width = 1, simplify = TRUE)
+    )
+  )
+)
+fig <- do.call(
+  "layout",
+  c(
+    layout_params,
+    list(
+      p = fig,
+      xaxis = xaxis_spectral,
+      yaxis = list(title = "Regression Coefficient", titlefont = list(color = "#7f7f7f"))
+    )
+  )
+)
+plotly_build2(fig)
+```
+
+```{r}
+#| output: asis
+if (spectral_selection[6]) cat("### Scores\n\n")
+```
+
+```{r}
+#| eval: !expr spectral_selection[6]
+fig <- plot_ly()
+for (i in components) {
+  fig <- fig |>
+    add_segments(
+      x = 1:n_observations,
+      xend = 1:n_observations,
+      y = as.vector(final_model$model$scores[, i]),
+      yend = 0,
+      line = list(dash = "dash", width = 0.3, color = "black"),
+      showlegend = F,
+      visible = (i == opt_comp)
+    )
+}
+for (i in components) {
+  fig <- do.call(
+    "add_markers",
+    c(
+      plotly_params["line" != names(plotly_params)],
+      list(
+        p = fig,
+        x = 1:n_observations,
+        y = as.vector(final_model$model$scores[, i]),
+        visible = (i == opt_comp),
+        hovertext = observation_names,
+        showlegend = F,
+        hoverinfo = "x+y+text",
+        type = "scatter",
+        mode = "markers"
+      )
+    )
+  )
+}
+fig <- do.call(
+  "layout",
+  c(
+    layout_params,
+    list(
+      p = fig,
+      xaxis = list(
+        title = "Observation",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      yaxis = list(
+        title = "Score",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      sliders = sliders
+    )
+  )
+)
+plotly_build2(fig)
+```
+
+```{r}
+#| output: asis
+if (spectral_selection[7]) cat("### 3D Scores\n\n")
+```
+
+```{r}
+#| eval: !expr spectral_selection[7]
+fig <- plot_ly(type = "scatter3d", mode = "markers")
+scores <- final_model$model$scores
+if (n_comps > 3) {
+  components_3d <- 2:(n_comps - 1)
+  max_comp <- max(2, min(n_comps - 1, opt_comp, na.rm = TRUE))
+  steps_3d <- list()
+  for (i in components_3d) {
+    step <- list(
+      args = list(
+        list(
+          visible = rep(FALSE, n_comps)
+        ),
+        list(scene = list(
+          xaxis = list(
+            title = paste("x: Component", i),
+            titlefont = list(color = "#7f7f7f")
+          ),
+          yaxis = list(
+            title = paste("y: Component", i - 1),
+            titlefont = list(color = "#7f7f7f")
+          ),
+          zaxis = list(
+            title = paste("z: Component", i + 1),
+            titlefont = list(color = "#7f7f7f")
+          )
+        ))
+      ),
+      method = "update",
+      label = paste("Component", i),
+      value = as.character(i)
+    )
+    step$args[[1]]$visible[i] <- TRUE
+    steps_3d[[i]] <- step
+  }
+  for (i in components_3d) {
+    fig <- add_markers(fig,
+      x = as.vector(scores[, i]),
+      y = as.vector(scores[, i - 1]),
+      z = as.vector(scores[, i + 1]),
+      visible = (i == opt_comp),
+      hovertext = observation_names,
+      showlegend = F,
+      marker = list(color = colrs[i]),
+      hoverinfo = "x+y+z+text"
+    )
+  }
+  sliders_3d <- list(list(
+    currentvalue = list(
+      prefix = "",
+      font = list(color = "black", xanchor = "left")
+    ),
+    active = opt_comp - 1,
+    steps = steps_3d,
+    pad = list(t = 50, r = 50, b = 0, l = 50)
+  ))
+  fig <- fig |> layout(
+    scene = list(
+      xaxis = list(
+        title = paste("x: Component", max_comp),
+        titlefont = list(color = "#7f7f7f")
+      ),
+      yaxis = list(
+        title = paste("y: Component", max_comp - 1),
+        titlefont = list(color = "#7f7f7f")
+      ),
+      zaxis = list(
+        title = paste("z: Component", max_comp + 1),
+        titlefont = list(color = "#7f7f7f")
+      )
+    ),
+    sliders = sliders_3d
+  )
+  plotly_build2(fig)
+} else if (n_comps == 3) {
+  fig <- add_markers(fig,
+    x = as.vector(scores[, 2]),
+    y = as.vector(scores[, 1]),
+    z = as.vector(scores[, 3]),
+    hovertext = observation_names,
+    showlegend = F,
+    marker = list(color = "blue"),
+    hoverinfo = "x+y+z+text"
+  ) |>
+    layout(
+      scene = list(
+        xaxis = list(
+          title = paste("x: Component", 2),
+          titlefont = list(color = "#7f7f7f")
+        ),
+        yaxis = list(
+          title = paste("y: Component", 1),
+          titlefont = list(color = "#7f7f7f")
+        ),
+        zaxis = list(
+          title = paste("z: Component", 3),
+          titlefont = list(color = "#7f7f7f")
+        )
+      )
+    )
+  plotly_build2(fig)
+} else {
+  print("Too few components for 3-dimensional plot")
+}
+```
+
+```{r}
+#| output: asis
+if (spectral_selection[8]) cat("### Scaled Scores\n\n")
+```
+
+```{r}
+#| eval: !expr spectral_selection[8]
+fig <- plot_ly()
+scaled_scores <- final_model$model$scaled_scores
+for (i in components) {
+  fig <- fig |>
+    add_segments(
+      x = 1:n_observations,
+      xend = 1:n_observations,
+      y = as.vector(scaled_scores[, i]),
+      yend = 0,
+      line = list(dash = "dash", width = 0.5, color = "black"),
+      showlegend = F,
+      visible = (i == opt_comp)
+    )
+}
+for (i in components) {
+  fig <- do.call(
+    "add_markers",
+    c(
+      plotly_params["line" != names(plotly_params)],
+      list(
+        p = fig,
+        x = 1:n_observations,
+        y = as.vector(scaled_scores[, i]),
+        visible = (i == opt_comp),
+        hovertext = observation_names,
+        showlegend = F,
+        hoverinfo = "x+y+text",
+        type = "scatter",
+        mode = "markers"
+      )
+    )
+  )
+}
+fig <- do.call(
+  "layout",
+  c(
+    layout_params,
+    list(
+      p = fig,
+      xaxis = list(
+        title = "Observation",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      yaxis = list(
+        title = "Scaled Score",
+        titlefont = list(color = "#7f7f7f"),
+        range = c(floor(min(scaled_scores)), ceiling(max(scaled_scores)))
+      ),
+      sliders = sliders
+    )
+  )
+)
+plotly_build2(fig)
+```
+
+```{r}
+#| output: asis
+if (spectral_selection[9]) cat("### Mahalanobis Distance\n\n")
+```
+
+```{r}
+#| eval: !expr spectral_selection[9]
+fig <- plot_ly()
+mahal <- final_model$calibration_statistics_all$Mahalanobis
+for (i in components) {
+  fig <- fig |>
+    add_segments(
+      x = 1:n_observations,
+      xend = 1:n_observations,
+      y = as.vector(mahal[, i]),
+      yend = 0,
+      line = list(dash = "dash", width = 0.5, color = "black"),
+      showlegend = F,
+      visible = (i == opt_comp)
+    )
+}
+for (i in components) {
+  fig <- do.call(
+    "add_markers",
+    c(
+      plotly_params["line" != names(plotly_params)],
+      list(
+        p = fig,
+        x = 1:n_observations,
+        y = as.vector(mahal[, i]),
+        visible = (i == opt_comp),
+        hovertext = observation_names,
+        showlegend = F,
+        hoverinfo = "x+y+text",
+        type = "scatter",
+        mode = "markers"
+      )
+    )
+  )
+}
+fig <- do.call(
+  "layout",
+  c(
+    layout_params,
+    list(
+      p = fig,
+      xaxis = list(
+        title = "Observation",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      yaxis = list(
+        title = "Mahalanobis Distance",
+        titlefont = list(color = "#7f7f7f"),
+        range = c(floor(min(mahal)), ceiling(max(mahal)))
+      ),
+      sliders = sliders
+    )
+  )
+)
+plotly_build2(fig)
+```
+
+
+```{r}
+#| output: asis
+if (header_selection[2]) cat("# Cross-Validation Results\n\n## Column {.tabset}\n\n")
+```
+
+```{r}
+#| output: asis
+if (cv_selection[1]) cat("### Error Measures\n\n")
+```
+
+```{r}
+#| eval: !expr cv_selection[1]
+errs <- final_model$model_cv$grid
+cal_errs <- final_model$model$cal_error
+fig <- plot_ly(type = "scatter", mode = "lines+markers") |>
+  add_trace(
+    x = components,
+    y = errs[, "rmse"],
+    name = "Root mean squared error",
+    text = "Root mean squared error",
+    hoverinfo = "x+y+text"
+  ) |>
+  add_trace(
+    x = components,
+    y = cal_errs[, "cal_set_error"],
+    name = "Standard error of calibration",
+    text = "Standard error of calibration",
+    hoverinfo = "x+y+text"
+  ) |>
+  add_trace(
+    x = components,
+    y = errs[, "largest_residual"],
+    name = "Largest residual",
+    text = "Largest residual",
+    hoverinfo = "x+y+text"
+  ) |>
+  add_trace(
+    x = components,
+    y = cal_errs[, "max_residuals"],
+    name = "Largest residual of calibration",
+    text = "Largest residual of calibration",
+    hoverinfo = "x+y+text"
+  ) |>
+  add_markers(
+    x = opt_comp,
+    y = unlist(list(
+      errs[opt_comp, c("rmse", "largest_residual")],
+      cal_errs[opt_comp, c("max_residuals", "cal_set_error")]
+    )),
+    marker = list(color = "blue"),
+    name = "Optimal component",
+    text = paste("Optimal component:", opt_comp),
+    hoverinfo = "text"
+  ) |>
+  layout(
+    xaxis = list(title = "Component", titlefont = list(color = "#7f7f7f")),
+    yaxis = list(title = "Error measures", titlefont = list(color = "#7f7f7f")),
+    hovermode = "x"
+  )
+plotly_build2(fig)
+```
+
+```{r}
+#| output: asis
+if (cv_selection[2]) cat("### CV Response Plot\n\n")
+```
+
+```{r}
+#| eval: !expr cv_selection[2]
+cv_predictions <- final_model$model_cv$pred
+errs <- final_model$model_cv$grid
+fig <- plot_ly()
+line_x_y <- seq(
+  from = min(cv_predictions, Y, na.rm = TRUE),
+  to = max(cv_predictions, Y, na.rm = TRUE),
+  length.out = n_observations
+)
+for (i in components) {
+  fig <- fig |>
+    add_lines(
+      x = line_x_y,
+      y = line_x_y,
+      visible = (i == opt_comp),
+      line = list(
+        dash = "dash",
+        width = 1,
+        color = "black"
+      ),
+      showlegend = F,
+      hoverinfo = "text",
+      type = "scatter",
+      mode = "lines",
+      text = "identity line"
+    )
+}
+for (i in components) {
+  lin_model <- lm(cv_predictions[, i] ~ Y)
+  fig <- fig |> add_lines(
+    x = line_x_y,
+    y = lin_model$coefficients[1] + line_x_y * lin_model$coefficients[2],
+    visible = (i == opt_comp),
+    line = list(width = 1, color = colrs[i]),
+    showlegend = F,
+    hoverinfo = "text",
+    type = "scatter",
+    mode = "lines",
+    text = "regression line"
+  )
+}
+for (i in components) {
+  fig <- fig |> add_text(
+    text = paste("<b>R<sup>2</sup>:", errs[i, "rsq"], "</b>"),
+    x = line_x_y[1],
+    y = line_x_y[n_observations],
+    textposition = "bottom right",
+    visible = (i == opt_comp),
+    showlegend = F,
+    hoverinfo = "text",
+    fillcolor = "red"
+  )
+}
+for (i in components) {
+  fig <- fig |> add_markers(
+    x = as.vector(Y),
+    y = cv_predictions[, i],
+    visible = (i == opt_comp),
+    hovertext = observation_names,
+    showlegend = F,
+    marker = list(color = colrs[i]),
+    hoverinfo = "x+y+text",
+    type = "scatter",
+    mode = "markers"
+  )
+}
+fig <- fig |>
+  layout(
+    xaxis = list(
+      title = "Reference Value",
+      titlefont = list(color = "#7f7f7f")
+    ),
+    yaxis = list(
+      title = "CV Predicted Reference",
+      titlefont = list(color = "#7f7f7f")
+    ),
+    sliders = sliders
+  )
+plotly_build2(fig)
+```
+
+```{r}
+#| output: asis
+if (cv_selection[3]) cat("### CV Response Plots Overview\n\n")
+```
+
+```{r}
+#| eval: !expr cv_selection[3]
+cv_predictions <- final_model$model_cv$pred
+line_x_y <- seq(
+  from = min(cv_predictions, na.rm = TRUE),
+  to = max(cv_predictions, na.rm = TRUE),
+  length.out = n_observations
+)
+plts <- list()
+for (i in components) {
+  lin_model <- lm(cv_predictions[, i] ~ Y)
+  cvresponse_df <- data.frame(
+    ti = line_x_y,
+    true = as.vector(Y),
+    pred = as.vector(cv_predictions[, i]),
+    texts = observation_names,
+    lin_line = lin_model$coefficients[1] + lin_model$coefficients[2] * line_x_y
+  )
+  fig <- plot_ly(cvresponse_df, type = "scatter", mode = "markers") |>
+    add_lines(
+      x = ~ti,
+      y = ~ti,
+      line = list(dash = "dash", width = 1, color = "black"),
+      name = "", showlegend = F, hoverinfo = "none"
+    ) |>
+    add_lines(
+      x = ~ti,
+      y = ~lin_line,
+      line = list(width = 1, color = colrs[i]),
+      name = "", showlegend = F, hoverinfo = "none"
+    ) |>
+    add_markers(
+      x = ~true,
+      y = ~pred,
+      hovertext = ~texts,
+      name = paste("Component", i),
+      marker = list(color = colrs[i])
+    )
+  plts <- append(plts, list(fig))
+}
+all_plts <- subplot(plts, nrows = max(floor(n_comps / 5), 1))
+plotly_build2(all_plts)
+```
+
+```{r}
+#| output: asis
+if (cv_selection[4]) cat("### CV Residuals\n\n")
+```
+
+```{r}
+#| eval: !expr cv_selection[4]
+fig <- plot_ly()
+cv_residuals <- final_model$calibration_statistics_all$cv_residual
+rownames(cv_residuals) <- observation_names
+for (i in components) {
+  fig <- fig |>
+    add_segments(
+      x = 1:n_observations,
+      xend = 1:n_observations,
+      y = as.vector(cv_residuals[, i]),
+      yend = 0,
+      line = list(dash = "dash", width = 0.5, color = "black"),
+      showlegend = F,
+      visible = (i == opt_comp)
+    )
+}
+for (i in components) {
+  fig <- do.call(
+    "add_markers",
+    c(
+      plotly_params["line" != names(plotly_params)],
+      list(
+        p = fig,
+        x = 1:n_observations,
+        y = as.vector(cv_residuals[, i]),
+        visible = (i == opt_comp),
+        hovertext = observation_names,
+        showlegend = F,
+        hoverinfo = "x+y+text",
+        type = "scatter",
+        mode = "markers"
+      )
+    )
+  )
+}
+fig <- do.call(
+  "layout",
+  c(
+    layout_params,
+    list(
+      p = fig,
+      xaxis = list(
+        title = "Observation",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      yaxis = list(
+        title = "Residual",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      sliders = sliders
+    )
+  )
+)
+plotly_build2(fig)
+```
+
+```{r}
+#| output: asis
+if (cv_selection[5]) cat("### Q-Q Plot of CV Residuals\n\n")
+```
+
+```{r}
+#| eval: !expr cv_selection[5]
+std_cv_residual <- scale(final_model$calibration_statistics_all$cv_residual, center = TRUE, scale = TRUE)
+fig <- plot_ly()
+line_x_y <- seq(
+  from = min(std_cv_residual, na.rm = TRUE),
+  to = max(std_cv_residual, na.rm = TRUE),
+  length.out = n_observations
+)
+for (i in components) {
+  fig <- fig |>
+    add_lines(
+      x = line_x_y,
+      y = line_x_y,
+      visible = (i == opt_comp),
+      line = list(
+        dash = "dash",
+        width = 1,
+        color = "black"
+      ),
+      showlegend = F,
+      hoverinfo = "none",
+      type = "scatter",
+      mode = "lines"
+    )
+}
+
+for (i in components) {
+  fig <- do.call(
+    "add_markers",
+    c(
+      plotly_params["line" != names(plotly_params)],
+      list(
+        p = fig,
+        x = qnorm(ppoints(n_observations)),
+        y = sort(std_cv_residual[, i]),
+        visible = (i == opt_comp),
+        hovertext = names(sort(std_cv_residual[, i])),
+        showlegend = F,
+        hoverinfo = "x+y+text",
+        type = "scatter",
+        mode = "markers"
+      )
+    )
+  )
+}
+fig <- do.call(
+  "layout",
+  c(
+    layout_params,
+    list(
+      p = fig,
+      xaxis = list(
+        title = "Theoretical Normal Quantile",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      yaxis = list(
+        title = "Sample Quantile",
+        titlefont = list(color = "#7f7f7f"),
+        range = c(
+          floor(min(std_cv_residual)),
+          ceiling(max(std_cv_residual))
+        )
+      ),
+      sliders = sliders
+    )
+  )
+)
+plotly_build2(fig)
+```
+
+```{r}
+#| output: asis
+if (cv_selection[6]) cat("### CV Q-values\n\n")
+```
+
+```{r}
+#| eval: !expr cv_selection[6]
+fig <- plot_ly()
+q_val <- final_model$calibration_statistics_all$Q_value
+for (i in components) {
+  fig <- fig |>
+    add_segments(
+      x = 1:n_observations,
+      xend = 1:n_observations,
+      y = as.vector(q_val[, i]),
+      yend = 0,
+      line = list(dash = "dash", width = 0.5, color = "black"),
+      showlegend = F,
+      visible = (i == opt_comp)
+    )
+}
+for (i in components) {
+  fig <- do.call(
+    "add_markers",
+    c(
+      plotly_params["line" != names(plotly_params)],
+      list(
+        p = fig,
+        x = 1:n_observations,
+        y = as.vector(q_val[, i]),
+        visible = (i == opt_comp),
+        hovertext = observation_names,
+        showlegend = F,
+        hoverinfo = "x+y+text",
+        type = "scatter",
+        mode = "markers"
+      )
+    )
+  )
+}
+fig <- do.call(
+  "layout",
+  c(
+    layout_params,
+    list(
+      p = fig,
+      xaxis = list(
+        title = "Observation",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      yaxis = list(
+        title = "Residual",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      sliders = sliders
+    )
+  )
+)
+plotly_build2(fig)
+```
+
+```{r}
+#| output: asis
+if (cv_selection[7]) cat("### Distributions\n\n")
+```
+
+```{r}
+#| eval: !expr cv_selection[7]
+distr_list <- list()
+fig <- plot_ly()
+true_density <- density(Y)
+min_x <- min(true_density$x)
+min_y <- min(true_density$y)
+max_x <- max(true_density$x)
+max_y <- max(true_density$y)
+for (i in components) {
+  i_density <- density(final_model$calibration_statistics_all$predicted_y_in_cv[, i],
+    bw = true_density$bw,
+    from = min(true_density$x),
+    to = max(true_density$x)
+  )
+  distr_list[[i]] <- list(
+    visible = FALSE,
+    pred = i_density
+  )
+  min_x <- min(min_x, i_density$x)
+  min_y <- min(min_y, i_density$y)
+  max_x <- max(max_x, i_density$x)
+  max_y <- max(max_y, i_density$y)
+}
+
+distr_list[opt_comp][[1]]$visible <- TRUE
+for (i in components) {
+  fig <- add_lines(fig,
+    x = true_density$x,
+    y = true_density$y,
+    visible = distr_list[i][[1]]$visible,
+    line = list(color = "black"),
+    hoverinfo = "x+y+text",
+    type = "scatter",
+    mode = "lines",
+    name = "Reference density",
+    text = "Reference density",
+    fill = "tozeroy",
+    fillcolor = rgb(0, 0, 0, alpha = 0.2)
+  )
+}
+
+for (i in components) {
+  fig <- add_lines(fig,
+    x = distr_list[i][[1]]$pred$x,
+    y = distr_list[i][[1]]$pred$y,
+    visible = distr_list[i][[1]]$visible,
+    showlegend = T,
+    line = list(color = colrs[i]),
+    hoverinfo = "x+y+text",
+    type = "scatter",
+    mode = "lines",
+    name = "Predicted density",
+    text = "Predicted density",
+    fill = "tozeroy",
+    fillcolor = rainbow(n_comps, alpha = 0.2)[i]
+  )
+}
+fig <- fig |> layout(
+  xaxis = list(
+    title = "Reference Values",
+    titlefont = list(color = "#7f7f7f"),
+    range = c(min_x, max_x)
+  ),
+  yaxis = list(
+    title = "Density",
+    titlefont = list(color = "#7f7f7f"),
+    range = c(min_y, max_y)
+  ),
+  sliders = sliders
+)
+plotly_build2(fig)
+```
+
+
+```{r}
+#| output: asis
+if (header_selection[3]) cat("# Regression Analysis Plots\n\n## Column {.tabset}\n\n")
+```
+
+```{r}
+#| output: asis
+if (regression_selection[1]) cat("### Response Plot\n\n")
+```
+
+```{r}
+#| eval: !expr regression_selection[1]
+fits <- final_model$model$fitted_y
+fig <- plot_ly()
+line_x_y <- seq(
+  from = min(Y, fits),
+  to = max(Y, fits),
+  length.out = n_observations
+)
+for (i in components) {
+  fig <- fig |>
+    add_lines(
+      x = line_x_y,
+      y = line_x_y,
+      visible = (i == opt_comp),
+      line = list(
+        dash = "dash",
+        width = 1,
+        color = "black"
+      ),
+      showlegend = F,
+      hoverinfo = "text",
+      type = "scatter",
+      mode = "lines",
+      text = "regression line"
+    )
+}
+for (i in components) {
+  fig <- add_markers(fig,
+    x = as.vector(Y),
+    y = as.vector(fits[, i]),
+    visible = (i == opt_comp),
+    hovertext = observation_names,
+    showlegend = F,
+    marker = list(color = colrs[i]),
+    hoverinfo = "x+y+text",
+    type = "scatter",
+    mode = "markers"
+  )
+}
+fig <- fig |> layout(
+  xaxis = list(
+    title = "Reference Value",
+    titlefont = list(color = "#7f7f7f"),
+    range = c(floor(min(Y)), ceiling(max(Y)))
+  ),
+  yaxis = list(
+    title = "Predicted Reference",
+    titlefont = list(color = "#7f7f7f"),
+    range = c(floor(min(fits)), ceiling(max(fits)))
+  ),
+  sliders = sliders
+)
+plotly_build2(fig)
+```
+
+```{r}
+#| output: asis
+if (regression_selection[2]) cat("### Response Plots Overview\n\n")
+```
+
+```{r}
+#| eval: !expr regression_selection[2]
+fits <- final_model$model$fitted_y
+line_x_y <- seq(
+  from = min(Y, fits),
+  to = max(Y, fits),
+  length.out = n_observations
+)
+plts <- list()
+for (i in components) {
+  all_response_df <- data.frame(
+    ti = line_x_y,
+    true = as.vector(Y),
+    pred = as.vector(fits[, i]),
+    texts = observation_names
+  )
+  fig <- plot_ly(all_response_df, type = "scatter", mode = "markers") |>
+    add_lines(
+      x = ~ti,
+      y = ~ti,
+      line = list(dash = "dash", width = 1, color = "black"),
+      name = "", showlegend = F, hoverinfo = "text", text = "regression line"
+    ) |>
+    add_markers(
+      x = ~true,
+      y = ~pred,
+      hovertext = ~texts,
+      name = paste("Component", i),
+      marker = list(color = colrs[i])
+    )
+  plts <- append(plts, list(fig))
+}
+all_plts <- subplot(plts, nrows = max(1, floor(n_comps / 5)))
+plotly_build2(all_plts)
+```
+
+```{r}
+#| output: asis
+if (regression_selection[3]) cat("### Residuals\n\n")
+```
+
+```{r}
+#| eval: !expr regression_selection[3]
+fig <- plot_ly()
+residual <- cal_stats$residual
+for (i in components) {
+  fig <- fig |>
+    add_segments(
+      x = 1:n_observations,
+      xend = 1:n_observations,
+      y = as.vector(residual[, i]),
+      yend = 0,
+      line = list(dash = "dash", width = 1, color = "black"),
+      showlegend = F,
+      visible = (i == opt_comp)
+    )
+}
+for (i in components) {
+  fig <- do.call(
+    "add_markers",
+    c(
+      plotly_params["line" != names(plotly_params)],
+      list(
+        p = fig,
+        x = 1:n_observations,
+        y = as.vector(residual[, i]),
+        visible = (i == opt_comp),
+        hovertext = observation_names,
+        showlegend = F,
+        hoverinfo = "x+y+text",
+        type = "scatter",
+        mode = "markers"
+      )
+    )
+  )
+}
+fig <- do.call(
+  "layout",
+  c(
+    layout_params,
+    list(
+      p = fig,
+      xaxis = list(
+        title = "Observation",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      yaxis = list(
+        title = "Residual",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      sliders = sliders
+    )
+  )
+)
+
+plotly_build2(fig)
+```
+
+```{r}
+#| output: asis
+if (regression_selection[4]) cat("### Q-Q Plot of Residuals\n\n")
+```
+
+```{r}
+#| eval: !expr regression_selection[4]
+std_residual <- scale(cal_stats$residual, center = TRUE, scale = TRUE)
+fig <- plot_ly()
+line_x_y <- seq(
+  from = min(std_residual),
+  to = max(std_residual),
+  length.out = n_observations
+)
+for (i in components) {
+  fig <- fig |>
+    add_lines(
+      x = line_x_y,
+      y = line_x_y,
+      visible = (i == opt_comp),
+      line = list(
+        dash = "dash",
+        width = 1,
+        color = "black"
+      ),
+      showlegend = F,
+      hoverinfo = "none",
+      type = "scatter",
+      mode = "lines"
+    )
+}
+
+for (i in components) {
+  fig <- do.call(
+    "add_markers",
+    c(
+      plotly_params["line" != names(plotly_params)],
+      list(
+        p = fig,
+        x = qnorm(ppoints(n_observations)),
+        y = sort(std_residual[, i]),
+        visible = (i == opt_comp),
+        hovertext = paste("Observation", names(sort(std_residual[, i]))),
+        showlegend = F,
+        hoverinfo = "x+y+text",
+        type = "scatter",
+        mode = "markers"
+      )
+    )
+  )
+}
+fig <- do.call(
+  "layout",
+  c(
+    layout_params,
+    list(
+      p = fig,
+      xaxis = list(
+        title = "Theoretical Normal Quantile",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      yaxis = list(
+        title = "Sample Quantile",
+        titlefont = list(color = "#7f7f7f"),
+        range = c(
+          floor(min(std_residual)),
+          ceiling(max(std_residual))
+        )
+      ),
+      sliders = sliders
+    )
+  )
+)
+plotly_build2(fig)
+```
+
+```{r}
+#| output: asis
+if (regression_selection[5]) cat("### Residuals vs Fitted\n\n")
+```
+
+```{r}
+#| eval: !expr regression_selection[5]
+fig <- plot_ly()
+residual <- cal_stats$residual
+fits <- final_model$calibration_statistics_all$fitted_y
+for (i in components) {
+  loess_smoother <- loess.smooth(x = fits[, i], y = as.vector(residual[, i]))
+  fig <- fig |> add_lines(
+    x = loess_smoother$x,
+    y = loess_smoother$y,
+    hoverinfo = "x+y+text",
+    showlegend = F,
+    text = "Loess smoother",
+    visible = (i == opt_comp),
+    type = "scatter",
+    mode = "lines",
+    line = list(color = "red")
+  )
+}
+
+for (i in components) {
+  fig <- do.call(
+    "add_markers",
+    c(
+      plotly_params["line" != names(plotly_params)],
+      list(
+        p = fig,
+        x = fits[, i],
+        y = as.vector(residual[, i]),
+        visible = (i == opt_comp),
+        hovertext = observation_names,
+        showlegend = F,
+        hoverinfo = "x+y+text",
+        type = "scatter",
+        mode = "markers"
+      )
+    )
+  )
+}
+fig <- do.call(
+  "layout",
+  c(
+    layout_params,
+    list(
+      p = fig,
+      xaxis = list(
+        title = "Fitted values",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      yaxis = list(
+        title = "Residuals",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      sliders = sliders
+    )
+  )
+)
+plotly_build2(fig)
+```
+
+
+```{r}
+#| output: asis
+if (regression_selection[6]) cat("### Scale Location Plot\n\n")
+```
+
+```{r}
+#| eval: !expr regression_selection[6]
+fig <- plot_ly()
+fits <- final_model$calibration_statistics_all$fitted_y
+std_residual <- scale(cal_stats$residual, center = TRUE, scale = TRUE)
+for (i in components) {
+  loess_smoother <- loess.smooth(x = fits[, i], y = sqrt(abs(std_residual[, i])))
+  fig <- fig |> add_lines(
+    x = loess_smoother$x,
+    y = loess_smoother$y,
+    hoverinfo = "x+y+text",
+    showlegend = F,
+    text = "Loess smoother",
+    visible = (i == opt_comp),
+    type = "scatter",
+    mode = "lines",
+    line = list(color = "red")
+  )
+}
+
+for (i in components) {
+  fig <- do.call(
+    "add_markers",
+    c(
+      plotly_params["line" != names(plotly_params)],
+      list(
+        p = fig,
+        x = fits[, i],
+        y = as.vector(sqrt(abs(std_residual[, i]))),
+        visible = (i == opt_comp),
+        hovertext = observation_names,
+        showlegend = F,
+        hoverinfo = "x+y+text",
+        type = "scatter",
+        mode = "markers"
+      )
+    )
+  )
+}
+fig <- do.call(
+  "layout",
+  c(
+    layout_params,
+    list(
+      p = fig,
+      xaxis = list(
+        title = "Fitted Values",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      yaxis = list(
+        title = "Square Root of Standardized Residuals",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      sliders = sliders
+    )
+  )
+)
+plotly_build2(fig)
+```
+
+```{r}
+#| output: asis
+if (regression_selection[7]) cat("### Leverage vs Residuals\n\n")
+```
+
+```{r}
+#| eval: !expr regression_selection[7]
+fig <- plot_ly()
+fits <- final_model$calibration_statistics_all$fitted_y
+std_residual <- scale(cal_stats$residual, center = TRUE, scale = TRUE)
+for (i in components) {
+  loess_smoother <- loess.smooth(
+    x = hat(x = fits[, i]),
+    y = as.vector(std_residual[, i])
+  )
+  fig <- fig |> add_lines(
+    x = loess_smoother$x,
+    y = loess_smoother$y,
+    hoverinfo = "x+y+text",
+    showlegend = F,
+    text = "Loess smoother",
+    visible = (i == opt_comp),
+    type = "scatter",
+    mode = "lines",
+    line = list(color = "red")
+  )
+}
+
+for (i in components) {
+  fig <- do.call(
+    "add_markers",
+    c(
+      plotly_params["line" != names(plotly_params)],
+      list(
+        p = fig,
+        x = hat(x = fits[, i]),
+        y = as.vector(std_residual[, i]),
+        visible = (i == opt_comp),
+        hovertext = observation_names,
+        showlegend = F,
+        marker = list(color = colrs[i]),
+        hoverinfo = "x+y+text",
+        type = "scatter",
+        mode = "markers"
+      )
+    )
+  )
+}
+fig <- do.call(
+  "layout",
+  c(
+    layout_params,
+    list(
+      p = fig,
+      xaxis = list(
+        title = "Leverage",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      yaxis = list(
+        title = "Standardized Residuals",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      sliders = sliders
+    )
+  )
+)
+plotly_build2(fig)
+```
+
+
+```{r}
+#| output: asis
+if (header_selection[4]) cat("# Validation Plots\n\n## Column {.tabset}\n\n")
+```
+
+
+```{r}
+#| output: asis
+if (val_selection[1]) cat("### Predicted vs. Reference\n\n")
+```
+
+```{r}
+#| eval: !expr val_selection[1]
+n_vals <- length(validations$validation)
+refs <- validations$reference
+fig <- plot_ly()
+for (i in 1:n_vals) {
+  preds <- as.matrix(validations$validation[[i]]$val_results[, "y_hat"])
+  error <- as.matrix(validations$validation[[i]]$val_results[, "error"])
+  line_x_y <- seq(
+    from = min(preds, refs, na.rm = TRUE),
+    to = max(preds, refs, na.rm = TRUE),
+    length.out = 100
+  )
+  fig <- fig |> add_lines(
+    x = line_x_y,
+    y = line_x_y,
+    visible = (i == 1),
+    line = list(
+      dash = "dash",
+      width = 1,
+      color = "black"
+    ),
+    showlegend = F,
+    hoverinfo = "text",
+    type = "scatter",
+    mode = "lines",
+    text = "identity line"
+  )
+}
+for (i in 1:n_vals) {
+  preds <- as.matrix(validations$validation[[i]]$val_results[, "y_hat"])
+  error <- as.matrix(validations$validation[[i]]$val_results[, "error"])
+  line_x_y <- seq(
+    from = min(preds, refs, na.rm = TRUE),
+    to = max(preds, refs, na.rm = TRUE),
+    length.out = 100
+  )
+  lin_model <- lm(preds ~ refs)
+  fig <- fig |> add_lines(
+    x = line_x_y,
+    y = lin_model$coefficients[1] + line_x_y * lin_model$coefficients[2],
+    visible = (i == 1),
+    line = list(width = 1, color = colrs[i]),
+    showlegend = F,
+    hoverinfo = "text",
+    type = "scatter",
+    mode = "lines",
+    text = "regression line"
+  )
+}
+for (i in 1:n_vals) {
+  preds <- as.matrix(validations$validation[[i]]$val_results[, "y_hat"])
+  error <- as.matrix(validations$validation[[i]]$val_results[, "error"])
+  fig <- fig |> add_markers(
+    x = as.vector(refs),
+    y = as.vector(preds),
+    visible = (i == 1),
+    hovertext = paste("Observation", rownames(preds)),
+    showlegend = F,
+    marker = list(color = colrs[i]),
+    hoverinfo = "x+y+text",
+    type = "scatter",
+    mode = "markers"
+  )
+}
+for (i in 1:n_vals) {
+  line_x_y <- seq(
+    from = min(preds, refs, na.rm = TRUE),
+    to = max(preds, refs, na.rm = TRUE),
+    length.out = 100
+  )
+  if (!is.null(validations$model_information$model_grid)) {
+    model_info <- paste(
+      "Model: <b>R<sup>2</sup> =",
+      round(validations$model_information$model_grid[i, "rsq"], digits = 2),
+      "; RMSE =",
+      round(validations$model_information$model_grid[i, "rmse"], digits = 2),
+      "</b>"
+    )
+  } else {
+    model_info <- ""
+  }
+  fig <- fig |> add_text(
+    text = paste(model_info,
+      paste(
+        "Validation: <b>R<sup>2</sup> =",
+        round(validations$validation[[i]]$val_stats["rsq"], digits = 2),
+        "; RMSE =",
+        round(validations$validation[[i]]$val_stats["rmse"], digits = 2)
+      ),
+      collapse = "\n"
+    ),
+    x = line_x_y[1],
+    y = line_x_y[length(line_x_y)],
+    textposition = "bottom right",
+    visible = (i == 1),
+    showlegend = F,
+    hoverinfo = "text",
+    fillcolor = "red"
+  )
+}
+
+fig <- fig |>
+  layout(
+    xaxis = list(
+      title = "Reference Value",
+      titlefont = list(color = "#7f7f7f")
+    ),
+    yaxis = list(
+      title = "Predicted Reference",
+      titlefont = list(color = "#7f7f7f")
+    )
+  )
+if (n_vals > 1) {
+  val_steps <- list()
+  for (i in 1:n_vals) {
+    step <- list(
+      args = list("visible", rep(FALSE, n_vals)),
+      method = "restyle",
+      label = names(validations$validation)[i],
+      value = as.character(i)
+    )
+    step$args[[2]][i] <- TRUE
+    val_steps[[i]] <- step
+  }
+  val_sliders <- list(list(
+    currentvalue = list(
+      prefix = "",
+      font = list(color = "black", xanchor = "left")
+    ),
+    active = 0,
+    steps = val_steps,
+    pad = list(t = 50, r = 50, b = 0, l = 50)
+  ))
+  fig <- fig |> layout(sliders = val_sliders)
+}
+plotly_build2(fig)
+```

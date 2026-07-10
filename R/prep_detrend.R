@@ -1,0 +1,86 @@
+#' @title Detrending constructor for spectral preprocessing
+#'
+#' @description
+#'
+#' \loadmathjax
+#'
+#' Creates a preprocessing constructor for detrending spectral data. The
+#' constructor is intended to be passed to \code{\link{preprocess_recipe}} and
+#' executed via \code{\link{process}}.
+#'
+#' @usage
+#' prep_detrend(p = 2)
+#'
+#' @param p A positive integer specifying the polynomial order used for
+#' fitting. Must be >= 1. Default is \code{2}.
+#'
+#' @return An object of class \code{preprocessing} to be used in
+#' \code{\link{preprocess_recipe}} and executed by \code{\link{process}}.
+#'
+#' @details
+#' For each spectrum, a polynomial of order \code{p} is fitted using the
+#' column wavelengths as the explanatory variable (or integer indices if column
+#' names are not numeric). The residuals from this fit are returned as the
+#' detrended spectrum, removing wavelength-dependent baseline effects.
+#'
+#' This constructor always performs pure polynomial detrending without a prior
+#' SNV transformation. Users who want the full Barnes et al. (1989) procedure
+#' (SNV followed by detrending) should chain \code{\link{prep_snv}} before
+#' \code{prep_detrend} in their recipe.
+#'
+#' The computation is delegated to \code{\link[prospectr]{detrend}} with
+#' \code{snv = FALSE}.
+#'
+#' @references
+#' Barnes RJ, Dhanoa MS, Lister SJ. 1989. Standard normal variate
+#' transformation and de-trending of near-infrared diffuse reflectance
+#' spectra. Applied Spectroscopy, 43(5): 772-777.
+#'
+#' @author Leonardo Ramirez-Lopez
+#'
+#' @examples
+#' data("NIRcannabis")
+#' X <- NIRcannabis$spc
+#'
+#' # Pure polynomial detrend
+#' dt <- prep_detrend(p = 2)
+#' recipe <- preprocess_recipe(dt, device = "unspecified")
+#' X_dt <- process(X, recipe)
+#'
+#' # Barnes et al. (1989): SNV followed by detrend
+#' recipe_barnes <- preprocess_recipe(
+#'   prep_snv(), prep_detrend(p = 2),
+#'   device = "unspecified"
+#' )
+#' X_barnes <- process(X, recipe_barnes)
+#'
+#' @seealso \code{\link{prep_snv}}, \code{\link{preprocess_recipe}},
+#' \code{\link{process}}
+#' @export
+prep_detrend <- function(p = 2) {
+  if (!is_numeric_like(p)) {
+    stop("'p' must be numeric.")
+  }
+  p <- as.integer(p)
+  if (p < 1) {
+    stop("'p' must be an integer >= 1.")
+  }
+
+  structure(
+    list(
+      method = "prep_detrend",
+      p = p,
+      compatible_devices = "proxiscout"
+    ),
+    class = c("preprocessing", "list")
+  )
+}
+
+#' @noRd
+.exec_detrend <- function(X, step) {
+  wav <- as.numeric(colnames(X))
+  if (any(is.na(wav))) {
+    wav <- seq_len(ncol(X))
+  }
+  prospectr::detrend(X, wav = wav, p = step$p, snv = FALSE, method = "raw")
+}

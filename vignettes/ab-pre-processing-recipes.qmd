@@ -1,0 +1,361 @@
+---
+title: "Spectral pre-processing recipes"
+author:
+ - name: Leonardo Ramirez-Lopez and Claudio Orellano
+   email: ramirez-lopez.l@buchi.com
+   affiliation: Data Science Department, BUCHILabortechnik AG, Flawil, Switzerland
+date: today
+clean: true
+bibliography: ["proximetricsR.bib"]
+biblio-style: "apalike"
+link-citations: true
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    code-overflow: wrap
+    smooth-scroll: true
+    html-math-method: mathjax
+vignette: >
+  %\VignetteIndexEntry{Spectral pre-processing recipes}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{quarto::html}
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+# Disable ANSI colours for vignette rendering
+options(cli.num_colors = 1)
+Sys.setenv("RSTUDIO" = "")
+Sys.setenv("POSITRON" = "")
+old_options <- options(digits = 3)
+```
+
+# Overview
+
+Spectral preprocessing is a critical step in near-infrared (NIR) calibration workflows. Raw spectral data often contains systematic variations, noise, and artifacts that can obscure the true relationship between spectra and reference properties. The `proximetricsR` package provides a flexible, composable system for building and applying preprocessing pipelines.
+
+## Key concepts
+
+- **Preprocessing constructors** (`prep_*()` functions): Create specifications for individual preprocessing steps
+- **Preprocessing recipes** (`preprocess_recipe()`): Assemble multiple constructors into an ordered sequence
+- **Recipe execution** (`process()`): Apply the recipe to spectral data matrices
+- **Device compatibility**: Different devices (ProxiMate, ProxiScout) support different preprocessing algorithms
+
+This separation of specification and execution enables reproducible, device-aware preprocessing pipelines that can be stored, shared, and applied consistently.
+
+# Setup
+
+```{r loadlib, results = 'hide', include = FALSE}
+if (!requireNamespace("proximetricsR", quietly = TRUE)) {
+  devtools::load_all()
+}
+library("proximetricsR")
+```
+
+```{r loadlib2, eval = FALSE}
+library("proximetricsR")
+```
+
+```{r data, results = 'hide'}
+data("NIRcannabis")
+X <- NIRcannabis$spc
+```
+
+# Preprocessing constructors
+
+The `prep_*()` functions create preprocessing step objects. Each constructor validates its parameters and encodes algorithm-specific information. The order in which constructors are passed to `preprocess_recipe()` defines the execution order.
+
+## Resampling: `prep_resample()`
+
+Resampling interpolates spectra to a new wavelength or wavenumber grid.
+
+**ProxiMate mode** (user-defined grid):
+```{r prep_resample_proximate}
+prep_resample(grid = c(1001, 1700, 2))
+```
+
+**ProxiScout mode** (NeoSpectra standard grid):
+```{r prep_resample_proxiscout}
+prep_resample(grid = "proxiscout")
+```
+
+Resampling is often the first step to standardize wavelength grids across different instruments.
+
+## Smoothing: `prep_smooth()`
+
+Smoothing reduces high-frequency noise while preserving spectral features.
+
+**Savitzky-Golay** (ProxiScout compatible):
+```{r prep_smooth_sg}
+prep_smooth(w = 11, p = 3, algorithm = "savitzky-golay")
+```
+
+**Moving average** (ProxiMate compatible):
+```{r prep_smooth_ma}
+prep_smooth(w = 7, algorithm = "moving-average")
+```
+
+- `w`: window size (must be a positive odd integer)
+- `p`: polynomial order for Savitzky-Golay (must be < w)
+
+## Standard Normal Variate: `prep_snv()`
+
+SNV (Standard Normal Variate) normalizes each spectrum independently by centering and scaling:
+
+$$SNV_i = \frac{x_i - \bar{x}_i}{s_i}$$
+
+where $\bar{x}_i$ and $s_i$ are the mean and standard deviation of the $i$-th spectrum.
+
+```{r prep_snv}
+prep_snv()
+```
+
+SNV corrects for multiplicative effects (e.g., baseline offsets, path length variations) and is device-agnostic.
+
+## Derivatives: `prep_derivative()`
+
+Derivatives enhance spectral differences and reduce baseline effects.
+
+**Savitzky-Golay** (ProxiScout):
+```{r prep_derivative_sg}
+prep_derivative(m = 1, w = 11, p = 3, algorithm = "savitzky-golay")
+```
+
+**Gap-Segment** (ProxiScout):
+```{r prep_derivative_gap}
+prep_derivative(m = 2, w = 9, p = 3, algorithm = "gap-segment")
+```
+
+**NIRWise PLUS compatible** (ProxiMate):
+```{r prep_derivative_nwp}
+prep_derivative(m = 1, w = 5, p = 11, algorithm = "nwp")
+```
+
+Parameters:
+- `m`: derivative order (1 or 2)
+- `w`: window/gap size (positive odd integer)
+- `p`: polynomial order (Savitzky-Golay) or smoothing window (gap-segment, nwp)
+- `algorithm`: choice of method
+
+## Detrending: `prep_detrend()`
+
+Detrending removes wavelength-dependent baseline effects by fitting and removing a polynomial trend (ProxiScout only):
+
+```{r prep_detrend}
+prep_detrend(p = 2)
+```
+
+- `p`: polynomial order (default 2)
+
+For the full Barnes et al. (1989) procedure (SNV + detrending), chain `prep_snv()` before `prep_detrend()`.
+
+## Reflectance/Absorbance conversion: `prep_transform()`
+
+Convert between reflectance and absorbance using Beer's Law (ProxiScout only):
+
+$$A = -\log_{10}(R)$$
+
+```{r prep_transform}
+prep_transform(to = "absorbance")
+```
+
+- `to`: target unit (`"absorbance"` or `"reflectance"`)
+
+## Wavelength trimming: `prep_wav_trim()`
+
+Retain only a specified wavelength band and/or remove constant-valued edge columns (ProxiScout only):
+
+```{r prep_wav_trim}
+prep_wav_trim(band = c(1000, 1800), trim_constant_edges = TRUE)
+```
+
+- `band`: wavelength range to retain (or `c()` to skip)
+- `trim_constant_edges`: remove zero or constant-valued columns at edges
+
+# Building preprocessing recipes
+
+The `preprocess_recipe()` function combines constructors into an ordered pipeline. Order matters: preprocessing steps are applied in the order specified.
+
+## Device compatibility
+
+Different BUCHI devices support different preprocessing steps:
+
+**ProxiMate** supports:
+- `prep_resample()` with user-defined grids
+- `prep_smooth()` with moving-average algorithm
+- `prep_snv()`
+- `prep_derivative()` with nwp algorithm
+
+**ProxiScout** supports:
+- `prep_resample()` with "proxiscout" grid
+- `prep_smooth()` with savitzky-golay algorithm
+- `prep_snv()`
+- `prep_derivative()` with savitzky-golay or gap-segment algorithms
+- `prep_detrend()`
+- `prep_transform()`
+- `prep_wav_trim()`
+
+## Building recipes
+
+**Single preprocessing step (SNV only):**
+
+SNV is device-agnostic, so `device` is optional:
+
+```{r recipe_snv}
+recipe_snv <- preprocess_recipe(prep_snv())
+recipe_snv
+```
+
+**Multiple steps (requires device):**
+
+```{r recipe_proxiscout}
+recipe_ps <- preprocess_recipe(
+  prep_smooth(w = 7, p = 1, algorithm = "savitzky-golay"),
+  prep_snv(),
+  prep_derivative(m = 1, w = 5, p = 2, algorithm = "savitzky-golay"),
+  device = "proxiscout"
+)
+recipe_ps
+```
+
+**ProxiMate-specific recipe:**
+
+```{r recipe_proximate}
+recipe_pm <- preprocess_recipe(
+  prep_smooth(w = 7, algorithm = "moving-average"),
+  prep_snv(),
+  prep_derivative(m = 1, w = 5, p = 11, algorithm = "nwp"),
+  device = "proximate"
+)
+recipe_pm
+```
+
+Recipes validate that all steps are compatible with the specified device and raise informative errors if not.
+
+# Applying recipes with `process()`
+
+The `process()` function executes a recipe on spectral data:
+
+```{r process_snv}
+X_snv <- process(X, recipe_snv)
+dim(X_snv)
+```
+
+```{r process_proxiscout}
+X_ps <- process(X, recipe_ps)
+dim(X_ps)
+```
+
+The applied recipe is stored as an attribute and can be retrieved:
+
+```{r process_inspect}
+applied_recipe <- attr(X_ps, "preprocess_recipe")
+applied_recipe
+```
+
+# Practical examples
+
+## Example 1: ProxiMate workflow
+
+A typical ProxiMate workflow for fat/protein prediction:
+
+```{r example_proximate}
+recipe_pm_fat <- preprocess_recipe(
+  prep_smooth(w = 7, algorithm = "moving-average"),
+  prep_snv(),
+  prep_derivative(m = 1, w = 5, p = 11, algorithm = "nwp"),
+  device = "proximate"
+)
+
+X_fat_prep <- process(X, recipe_pm_fat)
+head(X_fat_prep[, 1:5])
+```
+
+## Example 2: ProxiScout workflow with detrending
+
+ProxiScout instruments benefit from additional preprocessing steps:
+
+```{r example_proxiscout_full}
+recipe_ps_full <- preprocess_recipe(
+  prep_resample(grid = "proxiscout"),
+  prep_smooth(w = 7, p = 1, algorithm = "savitzky-golay"),
+  prep_snv(),
+  prep_detrend(p = 2),
+  prep_derivative(m = 1, w = 5, p = 2, algorithm = "savitzky-golay"),
+  device = "proxiscout"
+)
+
+X_ps_full <- process(X, recipe_ps_full)
+dim(X_ps_full)
+```
+
+## Example 3: Minimal preprocessing
+
+Sometimes less is more. A minimal recipe with only SNV:
+
+```{r example_minimal}
+recipe_minimal <- preprocess_recipe(prep_snv())
+X_minimal <- process(X, recipe_minimal)
+```
+
+## Example 4: Wavelength band selection
+
+Select a specific wavelength range for ProxiScout:
+
+```{r example_band}
+recipe_band <- preprocess_recipe(
+  prep_wav_trim(band = c(1100, 1600)),
+  prep_smooth(w = 5, p = 1, algorithm = "savitzky-golay"),
+  prep_snv(),
+  device = "proxiscout"
+)
+
+X_band <- process(X, recipe_band)
+colnames(X_band)[c(1, ncol(X_band))]
+```
+
+# Best practices
+
+## Order matters
+
+Preprocessing steps affect each other. Common orderings:
+
+1. **Smoothing → SNV → Derivative** (standard for noise reduction + normalization + enhancement)
+2. **Resampling → Smoothing → Derivative → SNV** (device-specific resampling first)
+3. **SNV → Detrend** (full de-trending procedure)
+
+## Device-aware development
+
+Always specify `device = "proximate"` or `device = "proxiscout"` when building recipes (except for SNV-only recipes). This ensures recipes are portable and the preprocessing is compatible with the target device.
+
+## Reproducibility
+
+Store recipes alongside calibration models to ensure preprocessing is applied identically during prediction. The `process()` function attaches the recipe as an attribute for downstream tracking.
+
+## Parameter tuning
+
+Preprocessing parameters are typically tuned during model development:
+
+- Window sizes should be small relative to spectral features of interest
+- Derivative orders depend on spectral complexity (first-order for baseline removal, second-order for sharper features)
+- SNV is almost universally beneficial for multiplicative interference
+
+# Summary
+
+The preprocessing recipe system in `proximetricsR` provides a structured, reproducible approach to spectral preprocessing:
+
+- **Constructors** define individual steps with validation
+- **Recipes** compose steps into device-aware pipelines
+- **Process** applies recipes consistently
+- **Attributes** preserve recipe information for downstream use
+
+This design enables seamless integration with calibration workflows and ensures preprocessing is applied consistently from model development through deployment on BUCHI devices.
+
+```{r cleanup, include = FALSE}
+options(old_options)
+```

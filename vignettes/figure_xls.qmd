@@ -1,0 +1,33 @@
+---
+title: "XLS figure for Mathematical overview of regression algorithms"
+author: 
+ - name: Claudio Orellano and Leonardo Ramirez- Lopez
+   email: orellano.c@buchi.com
+date: today
+bibliography: ["proximetricsR.bib"]
+biblio-style: "apalike"
+link-citations: true
+header-includes:
+  - \usepackage{xcolor}
+  - \usepackage{listings}
+  - \usepackage{tikz}
+  - \usetikzlibrary{arrows}
+  - \usetikzlibrary{positioning}
+  - \usetikzlibrary{calc}
+format: html
+---
+
+
+```{tikz, fig.cap = "Intervals in relation to m. Each interval is truncated such that it covers only values in [1,M].", fig.ext='svg', echo=FALSE}
+\begin{tikzpicture}[scale=0.3]
+  \draw[white,step=0.25, opacity=0] (-4,-3) grid (2, 2);
+	\draw(-20,0)--(20,0);
+	\foreach \x/\xtext in {-15,-3,+3,+15}
+	\draw[thick](\x,-5pt)--(\x,5pt) node[above] {$m\xtext$};
+	\draw[thick](0,-6pt)--(0,6pt) node[above] (A) {$m$};
+	\foreach \x in {-20,...,20}
+	\draw(\x,3pt)--(\x,-3pt);
+	\draw(-15,-1)--(-15,-2.2)--(-3,-2.2)--(-3,-1) node[below left of=A, left=1.6cm] {$J_m^-$};
+	\draw(15,-1)--(15,-2.2)--(3,-2.2)--(3,-1) node[below right of=A, right=1.6cm] {$J_m^+$};
+\end{tikzpicture}
+```

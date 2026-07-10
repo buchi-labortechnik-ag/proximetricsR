@@ -1,0 +1,25 @@
+citHeader("To cite package 'proximetricsR' in publications use:")
+
+year <- sub(".*(2[[:digit:]]{3})-.*", "\\1", meta$Date, perl = TRUE)
+vers <- paste("R package version", meta$Version)
+
+bibentry(bibtype = "Manual",
+  title = "proximetricsR: Spectral Preprocessing and Calibration for NIR Sensors",
+  author = c(
+    person("Leonardo", "Ramirez-Lopez", email = "ramirez-lopez.l@buchi.com", role = c("aut", "cre")),
+    person("Claudio", "Orellano", role = "aut"),
+    person("Nicolae", "Cudlenco", role = "aut"),
+    person("Mai", "Said", role = "aut"),
+    person("Mohamed", "Abushosha", role = "aut"), 
+    person("Marcal", "Plans", role = "aut")
+  ),
+  year = year,
+  note = vers,
+  url = "https://github.com/l-ramirez-lopez/proximetricsr",
+
+  textVersion =
+  paste("Ramirez-Lopez, L., Orellano, C., Cudlenco, N., Said, M., and Abushosha, M. (",
+        year,
+        "). proximetricsR: Spectral Preprocessing and Calibration for NIR Sensors. ",
+        vers, ".", sep="")
+)

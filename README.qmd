@@ -1,0 +1,197 @@
+---
+format:
+  gfm:
+    output-file: README.md
+engine: knitr
+---
+
+
+# `proximetricsR` Spectral preprocessing and chemometric calibration of near-infrared (NIR) sensors
+
+[![R-CMD-check](https://github.com/l-ramirez-lopez/proximetricsR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/l-ramirez-lopez/proximetricsR/actions/workflows/R-CMD-check.yaml)
+[![codecov](https://codecov.io/gh/l-ramirez-lopez/proximetricsR/badge.svg)](https://app.codecov.io/gh/l-ramirez-lopez/proximetricsR)
+
+
+
+<img align="right" src="./man/figures/logo.png" width="15%">
+
+_Last update: `r Sys.Date()`_
+
+Version: `r paste(proximetricsR:::pkg_info()[1:2], collapse =  " \U002D\U002D ")`
+
+
+
+## About
+
+The `proximetricsR` package provides tools for developing, validating, and deploying quantitative chemometric models for near-infrared (NIR) spectroscopy, with dedicated support for BUCHI NIR sensors and workflows.
+
+The package implements partial least squares (PLS) regression and related methods together with spectral preprocessing, model validation, visualisation, and native support for BUCHI calibration and application formats.
+
+### Key features
+
+* Spectral preprocessing and preprocessing pipelines  
+
+* Quantitative calibration using PLS-based methods  
+
+* Model validation, diagnostics, and uncertainty assessment  
+
+* Native support for BUCHI file formats and applications  
+
+* Publication-ready visualisation tools
+
+
+```{r}
+#| label: setup
+#| include: false
+
+
+# Strip ANSI from chunk outputs (your existing hook)
+knitr::knit_hooks$set(output = function(x, options) {
+  x <- gsub("\033\\[[0-9;]*[A-Za-z]", "", x)
+  paste0("```\n", x, "```")
+})
+
+# Silently load proximetricsR
+invisible(capture.output(
+  suppressPackageStartupMessages(library(proximetricsR)),
+  type = "output"
+))
+```
+
+## Installation
+
+Install the development version from GitHub:
+
+```r
+# install.packages("remotes")
+remotes::install_github("l-ramirez-lopez/proximetricsr")
+```
+
+Requires R ≥ 4.2.0 and compilation tools (C++ via Rcpp and RcppArmadillo).
+
+## A couple of examples
+
+```{r}
+#| results: hide
+library(proximetricsR)
+
+data("NIRcannabis")
+# the list of formulas for the models to be built
+app_formulas <- list(THC ~ spc, THCA ~ spc, CBD ~ spc, CBDA ~ spc)
+
+# the list of pre-processing recipes to be tested
+precipes <- list(
+  recipe_1 = preprocess_recipe(
+    prep_resample(grid = c(1001, 1700, 2)),
+    prep_snv(),
+    prep_derivative(m = 1, w = 9, p = 7, algorithm = "nwp"),
+    device = "proximate"
+  ),
+  recipe_2 = preprocess_recipe(
+    prep_resample(grid = c(1001, 1700, 2)),
+    prep_snv(),
+    prep_derivative(m = 2, w = 11, p = 9, algorithm = "nwp"),
+    device = "proximate"
+  )
+)
+
+optimized_app <- calibrate_models(
+  formulas = app_formulas,
+  data = NIRcannabis,
+  preprocess_recipes = precipes,
+  methods = list(fit_plsr(15, type = "nwp")),
+  return_inputs = TRUE,
+  save_all = FALSE
+)
+```
+
+```{r}
+optimized_app
+```
+
+
+## Core functionality
+
+### Spectral preprocessing
+
+A collection of preprocessing methods is available through functions with the `prep_*` prefix. The `preprocess_recipe()` framework enables the construction of reproducible preprocessing pipelines that can be applied consistently during calibration and prediction.
+
+Supported operations include:
+
+* Spectral resampling
+* Savitzky-Golay smoothing and derivatives
+* Standard normal variate (SNV)
+* Detrending
+* Gap-segment derivatives
+* Transformations and scaling
+
+### Model calibration
+
+The package supports multiple regression approaches, including:
+
+* Partial least squares (PLS)
+* Modified PLS (MPLS)
+* NIRWise PLUS-compatible workflows
+* XLS variants
+
+The `calibrate_models()` function enables automated calibration, parameter optimisation, and model comparison using a range of cross-validation strategies.
+
+### Model validation and visualisation
+
+Built-in tools support:
+
+* Model performance assessment  
+
+* Outlier detection  
+
+* Uncertainty estimation  
+
+* Model interpretation
+
+Publication-ready diagnostic plots can be generated using `plot.spectral_model()`.
+
+### BUCHI ProxiMate & ProxiScout integration
+
+`proximetricsR` implements algorithms that are numerically consistent with BUCHI NIRWise PLUS software, enabling reproducible workflows between R and production BUCHI devices.
+
+Key capabilities include:
+
+* **Native file I/O:** Read and write ProxiMate and ProxiScout formats (`.cal`, `.prj`, `.nax`, `.rtf`, `.nad`, `.tsv`)  
+
+* **Application bundles:** Create deployable `.nax` applications containing calibration models, preprocessing metadata, and device-specific parameters  
+ 
+* **Sensor-aware workflows:** Support preprocessing and calibration workflows tailored to BUCHI sensor characteristics  
+
+* **Cross-software reproducibility:** Develop and validate models in R and deploy them directly to BUCHI instruments without re-parameterisation
+
+## Documentation
+
+For a complete overview of available vignettes:
+
+```r
+browseVignettes("proximetricsR")
+```
+
+Additional documentation can be accessed through:
+
+```r
+help(package = "proximetricsR")
+```
+
+## References
+
+* Wold, S. (1975). Pattern recognition by means of disjoint principal components models. *Pattern Recognition*, 8(3), 127–139. [doi:10.1016/B978-0-12-103950-9.50017-4](https://doi.org/10.1016/B978-0-12-103950-9.50017-4)
+
+* Shenk, J. S., & Westerhaus, M. O. (1991). The application of near infrared reflectance spectroscopy (NIRS) to compositional analysis of agricultural products. *Crop Science*, 31(2), 409–413. [doi:10.2135/cropsci1991.0011183X003100020049x](https://doi.org/10.2135/cropsci1991.0011183X003100020049x)
+
+* Westerhaus, M. O. (2014). Eastern Analytical Symposium Award for outstanding innovations in near infrared spectroscopy. *NIR News*, 25(7), 7–10. [doi:10.1255/nirn.1492](https://doi.org/10.1255/nirn.1492)
+
+## Support
+
+For bug reports, feature requests, and discussions, please create an issue on GitHub:
+
+https://github.com/l-ramirez-lopez/proximetricsr/issues
+
+For questions, contact:
+
+[ramirez-lopez.l@buchi.com](mailto:ramirez-lopez.l@buchi.com)

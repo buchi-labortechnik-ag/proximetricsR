@@ -1,0 +1,343 @@
+---
+title: "ProxiMate: Read and recalibrate applications"
+author: 
+ - name: Leonardo Ramirez-Lopez and Claudio Orellano
+   email: ramirez-lopez.l@buchi.com
+   affiliation: Data Science Department, BUCHILabortechnik AG, Flawil, Switzerland
+date: today
+clean: true
+bibliography: ["proximetricsR.bib"]
+biblio-style: "apalike"
+link-citations: true
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    code-overflow: wrap
+    smooth-scroll: true
+    html-math-method: mathjax
+vignette: >
+  %\VignetteIndexEntry{Read and recalibrate application}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{quarto::html}
+---
+
+
+```{r}
+#| label: setup
+#| include: false
+
+# Disable ANSI colours for vignette rendering
+options(cli.num_colors = 1)
+Sys.setenv("RSTUDIO" = "")
+Sys.setenv("POSITRON" = "")
+old_options <- options(digits = 3)
+```
+
+# Summary
+
+This vignette presents a set of experimental functions aimed at facilitating the
+read, exploration and re-calibration of ProxiMate applications.
+
+```{r}
+#| label: loadlib
+#| results: hide
+#| include: false
+
+# Load package, or use devtools::load_all() if in development
+if (!requireNamespace("proximetricsR", quietly = TRUE)) {
+  devtools::load_all()
+}
+library("proximetricsR")
+```
+
+```{r}
+#| label: loadlib2
+#| eval: false
+
+library("prospectr")
+library("proximetricsR")
+```
+
+
+## Calibrate an application and write a nax
+
+Here we use a two DEMO files containing spectral data of soybean meal samples
+measured with two different BUCHI ProxiMate devices (up-view mode). These 
+datasets are available at a public repository of BUCHI demo data.
+
+```{r}
+#| label: setawd
+#| eval: false
+
+# In practice, set this to the directory containing your data files, e.g.:
+# my_working_dir <- "C:/Users/YourName/Downloads"
+# my_working_dir <- "~/Downloads"
+my_working_dir <- "path/to/your/data"
+setwd(my_working_dir)
+```
+
+```{r}
+#| label: read
+
+# Data location
+data_loc <- "https://raw.githubusercontent.com/buchi-labortechnik-ag/demo_data/main/data/"
+
+# Location of the TSV files containing the spectral data of soybean meal
+my_file_1 <- "SoybeanMeal_file1.tsv"
+my_file_2 <- "SoybeanMeal_file2.tsv"
+
+my_file_1 <- paste0(data_loc, my_file_1)
+my_file_2 <- paste0(data_loc, my_file_2)
+
+# Read the files
+mdata_1 <- proximate_read_data(my_file_1)
+mdata_2 <- proximate_read_data(my_file_2)
+
+mdata <- proximate_merge(list(mdata_1, mdata_2))
+
+# Define the vector of new wavelengths with constant resolution.
+# Replace the spc matrix with the new resampled matrix.
+# For working with proximetricsR, spectra must be stored in an spc matrix
+# inside the data matrix.
+mdata$spc <- process(mdata$spc, prep_resample(c(900, 1700, 2)))
+
+final_wavs <- as.numeric(colnames(mdata$spc))
+```
+
+```{r}
+#| label: plotspectra2
+#| fig-cap: "Merged spectra."
+#| fig-cap-style: "Image Caption"
+#| fig-align: center
+#| fig-width: 8
+#| fig-height: 5
+#| echo: true
+#| fig-retina: 0.85
+
+matplot(
+  x = final_wavs,
+  y = t(mdata$spc),
+  xlab = "Wavelengths, nm",
+  ylab = "Absorbance",
+  type = "l",
+  lty = 1,
+  col = rgb(0.5, 0.5, 0.5, 0.3)
+)
+grid()
+```
+
+```{r}
+#| label: properties2
+
+# This gets the names of all variables in the data
+names(mdata)
+
+# This returns the column names of all responses
+y_names <- extract_property_names(mdata)
+
+# The indices of all response variables
+ys_indices <- which(colnames(mdata) %in% y_names)
+
+# Samples with reference values
+colSums(!is.na(mdata[, y_names]))
+```
+
+From the `r length(y_names)` properties, the examples that will follow will only 
+take into account 2 of them (the first two): `r paste0(y_names[1:2], collapse = " and ")`.
+
+```{r}
+#| label: properties3
+#| results: hide
+
+# Get the names of the response variables
+y_names <- y_names[1:2]
+```
+
+```{r}
+#| label: define
+#| results: hide
+
+# Define the necessary objects for creating an application
+app_formulas <- lapply(paste0(y_names, " ~ spc"), FUN = formula)
+app_formulas
+
+# Define the metadata of each model, in the same order as app_formulas
+models_metadata <- list(
+  # For the first property
+  add_model_metadata(decimal_places = 2, unit = "%"),
+  # For the second property
+  add_model_metadata(decimal_places = 2, unit = "%")
+)
+
+# Recipe with:
+# - spline/resampling: spectral range between 900 and 1700 in steps of 4
+# - standard normal variate
+# - first derivative: gap parameter 5 and smoothing factor 9
+my_precipe_1 <- preprocess_recipe(
+  prep_resample(c(900, 1700, 4)),
+  prep_snv(),
+  prep_derivative(m = 1, w = 5, p = 9, algorithm = "nwp"),
+  device = "proximate"
+)
+
+my_precipe_1$preprocessing_order
+
+# Recipe with:
+# - spline/resampling: spectral range between 900 and 1700 in steps of 4
+# - standard normal variate
+# - second derivative: gap parameter 7 and smoothing factor 11
+my_precipe_2 <- preprocess_recipe(
+  prep_resample(c(900, 1700, 4)),
+  prep_snv(),
+  prep_derivative(m = 2, w = 7, p = 11, algorithm = "nwp"),
+  device = "proximate"
+)
+
+my_precipe_2$preprocessing_order
+
+# Recipe with:
+# - spline/resampling: spectral range between 900 and 1700 in steps of 4
+# - standard normal variate
+# - second derivative: gap parameter 9 and smoothing factor 13
+my_precipe_3 <- preprocess_recipe(
+  prep_resample(c(900, 1700, 4)),
+  prep_snv(),
+  prep_derivative(m = 2, w = 9, p = 13, algorithm = "nwp"),
+  device = "proximate"
+)
+
+my_precipe_3$preprocessing_order
+
+my_precipes <- list(my_precipe_1, my_precipe_2, my_precipe_3)
+```
+
+
+```{r}
+#| label: rmethod
+
+# Use the modified PLS regression method, equivalent to the one
+# implemented in NIRWise PLUS.
+# We use a maximum of 11 components.
+my_pls_method <- fit_plsr(ncomp = 11, type = "nwp")
+my_pls_method
+```
+
+
+```{r}
+#| label: calcontrol
+# Control some aspects of how the calibration is built and optimized
+# We use k-fold cross-validation with selection of folds based on the order of
+# the samples in the data table ("sequential")
+# We also specify the number of times a model must be re-fitted after outlier
+# removal, e.g. 0 means no re-fiting i.e. no outlier removal; 1 means a model is
+# built, then it is used to identify and remove outliers and finally a the final
+# model is refitted; a value of 5 would mean that the model is refitted 4 times
+# for 4 outlier removal iterations.
+my_control <- calibration_control(
+  validation_type = "kfold",
+  number = 4,
+  folds = "sequential",
+  remove_outliers = 1 # the number of iterations of outlier removal
+)
+```
+
+Finally, calibrate the models:
+
+```{r}
+#| label: calibration
+optimized_app <- calibrate_models(
+  formulas = app_formulas,
+  data = mdata,
+  preprocess_recipes = my_precipes,
+  methods = list(my_pls_method),
+  control = my_control,
+  metadata_list = models_metadata,
+  save_all = TRUE
+)
+```
+
+
+```{r}
+#| label: showoptimize2
+optimized_app
+```
+The above object shows you a table with the validation results and the suggested
+pre-processing methods per model:
+
+```{r} 
+#| label: showoptimize1
+#| echo: false
+print(optimized_app, separator = " >\n ")
+```
+
+Write the application file:
+
+```{r}
+#| label: mymodelslist
+#| eval: true
+#| results: hide
+my_models <- optimized_app$final_models
+
+# add some important metadata to the application/model list
+my_models <- add_application_metadata(
+  my_models,
+  view = "Up",
+  name = "my_application",
+  description = "created with proximetricsR"
+)
+
+proximate_write_nax(
+  path = getwd(),
+  object = my_models
+)
+```
+
+# Read ProxiMate application files (.nax)
+
+Simple:
+
+```{r}
+#| label: readnax
+#| echo: true
+#| eval: true
+#| results: hide
+my_nax <- proximate_read_nax("my_application.nax")
+```
+
+# Recalibrate application
+
+## Just re-fit the models 
+
+Simple:
+
+```{r}
+#| label: recal
+#| eval: true
+#| results: hide
+my_recalnax <- proximate_recalibrate_nax(my_nax)
+```
+
+## Recalibrate based on new data
+```{r}
+#| label: recal2
+#| eval: true
+#| results: hide
+my_pred_file <- "SoybeanMeal_file3.tsv"
+my_pred_file <- paste0(data_loc, my_pred_file)
+
+pdata <- proximate_read_data(my_pred_file)
+
+# prepare the data to add to the nax
+to_add <- proximate_add2nax(data = pdata)
+
+# re-calibrate based on the new data
+my_recalnax2 <- proximate_recalibrate_nax(my_nax, add = to_add)
+```
+
+```{r cleanup, include = FALSE}
+options(old_options)
+```
+

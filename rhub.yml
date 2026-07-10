@@ -1,0 +1,23 @@
+# R-hub configuration
+# See https://github.com/r-hub/rhub for more details
+
+platforms:
+  - name: Linux (R-release)
+    rversion: release
+    os: linux
+
+  - name: Windows (R-release)
+    rversion: release
+    os: windows
+
+  - name: macOS (R-release)
+    rversion: release
+    os: macos
+
+  - name: Linux (R-devel)
+    rversion: devel
+    os: linux
+
+check-args:
+  - --no-manual
+  - --as-cran

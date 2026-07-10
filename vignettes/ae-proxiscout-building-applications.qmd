@@ -1,0 +1,320 @@
+---
+title: "ProxiScout: Building applications"
+author:
+ - name: Leonardo Ramirez-Lopez and Claudio Orellano
+   email: ramirez-lopez.l@buchi.com
+   affiliation: Data Science Department, BUCHILabortechnik AG, Flawil, Switzerland
+date: today
+clean: true
+bibliography: ["proximetricsR.bib"]
+biblio-style: "apalike"
+link-citations: true
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    number-sections: true
+    code-overflow: wrap
+    smooth-scroll: true
+    html-math-method: mathjax
+vignette: >
+  %\VignetteIndexEntry{ProxiScout: Building applications}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{quarto::html}
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+# Disable ANSI colours for vignette rendering
+options(cli.num_colors = 1)
+Sys.setenv("RSTUDIO" = "")
+Sys.setenv("POSITRON" = "")
+old_options <- options(digits = 3)
+```
+
+# Introduction
+
+ProxiScout applications consist of calibrated predictive models packaged in a device-compatible format. Unlike ProxiMate's file-based structure (.nax, .cal, .prj), ProxiScout applications use JSON-based serialization synchronized through the NeoSpectra Portal.
+
+A typical ProxiScout workflow involves:
+
+1. Loading and preparing spectral data  
+
+2. Building and validating calibration models  
+
+3. Preprocessing configuration matching device algorithms  
+
+4. Exporting models in ProxiScout-compatible format  
+
+See the ProxiScout Structure vignette for detailed information on application file formats and metadata.
+
+# Setup
+
+```{r loadlib, results = 'hide', include = FALSE}
+if (!requireNamespace("proximetricsR", quietly = TRUE)) {
+  devtools::load_all()
+}
+library("proximetricsR")
+```
+
+```{r loadlib2, eval = FALSE}
+library("proximetricsR")
+```
+
+# Workflow overview
+
+## Prepare spectral data
+
+Load your spectral data. Data should include: 
+
+- Spectral matrix (samples × wavenumbers)  
+
+- Reference property values (calibration targets)  
+
+- Sample metadata (optional)  
+
+Here, a demo dataset from the `prospectr` package [@prospectr2026]. This is used in these examples as it covers all the spectral regions measured by ProxiScout devices:
+
+```{r data}
+data("NIRsoil", package = "prospectr")
+
+# NIRsoil is in nanometers and absorbance
+mdata <- data.frame(
+  sampleName = rownames(NIRsoil),
+  Ciso = NIRsoil$Ciso,
+  Nt = NIRsoil$Nt,
+  CEC = NIRsoil$CEC
+)
+
+# ProxiScout data comes in reflectance in percentages, so we convert to
+# reflectance and scale to 0-100 range
+mdata$spc <- 100 * 1 / 10^(NIRsoil$spc)
+
+# Get wavelengths and convert from nm to wavenumbers (cm^-1)
+wav_nm <- as.numeric(colnames(mdata$spc))
+wav_cm <- 10000000 / wav_nm
+
+# Update column names to wavenumbers for ProxiScout compatibility
+colnames(mdata$spc) <- wav_cm
+
+head(colnames(mdata$spc))
+```
+
+```{r}
+class(mdata) <- c("proxiscout_data", class(mdata))
+```
+
+
+ProxiScout works with wavenumbers (cm⁻¹) in the NeoSpectra range (~3922-7407 cm⁻¹). The NIRsoil data spans ~400-2500 nm (4000-25000 cm⁻¹), but resampling to the ProxiScout grid will retain only overlapping wavenumbers.
+
+## Define preprocessing recipe
+
+ProxiScout supports device-specific preprocessing via the NeoSpectra wavenumber grid. Define your preprocessing sequence:
+
+```{r recipe}
+recipe_01 <- preprocess_recipe(
+  prep_resample(grid = "proxiscout"), # necessary for almost all ProxiScout recipe
+  prep_derivative(m = 2, w = 9, p = 2, algorithm = "savitzky-golay"),
+  prep_snv(),
+  device = "proxiscout"
+)
+
+recipe_01
+```
+
+Key points:
+- `prep_resample(grid = "proxiscout")` resamples to the standard NeoSpectra wavenumber grid, retaining only overlapping wavenumbers 
+
+- Smoothing uses Savitzky-Golay (not moving-average)  
+
+- Derivatives support Savitzky-Golay or gap-segment algorithms  
+
+- Additional steps like `prep_detrend()`, `prep_transform()`, and `prep_wav_trim()` are available  
+
+- Data is already in absorbance, so no conversion needed
+
+## Build calibration model
+
+### Example 1: Build a single model 
+
+Apply preprocessing and build the model:
+
+```{r calibrate, results = 'hide'}
+model_c <- calibrate(
+  Ciso ~ spc,
+  data = mdata,
+  preprocess = recipe_01,
+  method = fit_plsr(ncomp = 12, type = "modified"),
+  control = calibration_control(
+    validation_type = "kfold",
+    number = 5,
+    seed = 42
+  ),
+  verbose = FALSE
+)
+```
+
+Check model performance:
+
+```{r evaluate, results = 'hide'}
+model_c
+```
+
+```{r}
+#| eval: false
+plot(model_c)
+```
+
+#### Serialize the model for deployment 
+
+The model can be exported to ProxiScout format for deployment. Here we can see
+how that model is serialized:
+```{r}
+#| label: serialized
+#| results: 'hide'
+#| eval: false
+my_serialised_model_c <- proxiscout_write_model(model_c, file = NULL)
+my_serialised_model_c
+```
+
+To write the json file:
+
+```{r}
+#| eval: false
+proxiscout_write_model(model_c, file = "my_model_c.json")
+```
+
+
+### Example 2: Build multiple models at once testing different pre-processings
+
+To test multiple preprocessing recipes and build multiple models at once, use the `calibrate_models()` function. This function allows you to specify a list of formulas, preprocessing recipes, and modeling methods to systematically evaluate different combinations.
+
+Here is an example of how to build multiple models at once:
+
+First, build the list of formulas representing the calibration models we need
+to build:
+```{r}
+my_formulas <- list(Ciso ~ spc, CEC ~ spc)
+```
+
+Now let's define multiple preprocessing recipes to test. For example, we can compare the performance of a simple derivative-based recipe with a more complex one that includes wavenumber trimming:
+
+```{r}
+#| label: multi_calibrate1
+#| results: 'hide'
+recipe_02 <- preprocess_recipe(
+  prep_resample(grid = "proxiscout"),
+  prep_derivative(m = 1, w = 7, p = 2, algorithm = "savitzky-golay"),
+  device = "proxiscout"
+)
+
+recipe_03 <- preprocess_recipe(
+  prep_resample(grid = "proxiscout"),
+  prep_wav_trim(
+    band = c(4000, 7000),
+    trim_constant_edges = TRUE
+  ),
+  prep_derivative(m = 1, w = 7, p = 2, algorithm = "savitzky-golay"),
+  device = "proxiscout"
+)
+
+my_recipes <- list(recipe_01, recipe_02, recipe_03)
+```
+
+
+Define the multiple model fitting methods:
+
+```{r}
+my_fitting <- list(
+  fit_plsr(ncomp = 12, type = "modified"),
+  fit_plsr(ncomp = 10, type = "standard")
+)
+```
+
+Then, define the how to control the validations. This object will be used for all the models we are going to build:
+
+```{r}
+my_control <- calibration_control(
+  validation_type = "kfold",
+  number = 5,
+  remove_outliers = 1,
+  seed = 42
+)
+```
+
+Finally, build all the models at once:
+
+```{r}
+#| label: multi_calibrate2
+#| results: 'hide'
+multiple_models <- calibrate_models(
+  formulas = my_formulas,
+  data = mdata,
+  preprocess_recipes = my_recipes,
+  methods = my_fitting,
+  control = my_control,
+  save_all = TRUE
+)
+```
+
+
+```{r}
+#| eval: false
+multiple_models
+```
+
+```{r}
+#| eval: true
+#| echo: false
+df <- multiple_models$results_grid
+num_cols <- sapply(df, is.numeric)
+df[num_cols] <- lapply(df[num_cols], round, 2)
+multiple_models$results_grid <- df
+print(multiple_models)
+```
+
+#### Serialize the multiple models for deployment 
+
+
+```{r serialized2}
+#| eval: false
+proxiscout_write_model(
+  multiple_models$final_models$`Ciso ~ spc`,
+  file = "my_model_c2.json"
+)
+
+proxiscout_write_model(
+  multiple_models$final_models$`CEC ~ spc`,
+  file = "my_model_cec.json"
+)
+```
+
+## Export for ProxiScout
+
+Once satisfied with model performance, export to ProxiScout format. Refer to the Structure vignette for export details.
+
+# Device-specific considerations
+
+**NeoSpectra wavenumber grid:** ProxiScout instruments measure at fixed wavenumber positions. Always resample to `"proxiscout"` grid when building models for deployment.
+
+**Algorithm selection:** Choose from:   
+
+- Smoothing: Savitzky-Golay only   
+
+- Derivatives: Savitzky-Golay or gap-segment  
+
+
+- Additional: detrending, reflectance/absorbance conversion
+
+**Advanced preprocessing:** ProxiScout's broader algorithm support allows more flexible preprocessing pipelines compared to ProxiMate.
+
+```{r cleanup, include = FALSE}
+options(old_options)
+```  
+
+# References {-}
+
+
