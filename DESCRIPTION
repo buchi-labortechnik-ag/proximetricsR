@@ -1,7 +1,7 @@
 Package: proximetricsR
 Type: Package
 Title: Spectral Preprocessing and Chemometric Calibration of NIR Sensors
-Version: 0.6.4
+Version: 0.6.5
 Date: 2026-07-10
 Authors@R: c(
     person(given = "Leonardo",
@@ -41,7 +41,7 @@ Description: Provides tools to build quantitative chemometric models and
     (1991) <doi:10.2135/cropsci1991.0011183X003100020049x>, with further
     discussion by Westerhaus (2014) <doi:10.1255/nirn.1492>.
 License: MIT + file LICENSE
-URL: https://github.com/buchi-labortechnik-ag/proximetricsr
+URL: https://github.com/l-ramirez-lopez/proximetricsr
 VignetteBuilder: quarto
 Depends:
     R (>= 4.2.0)
@@ -64,8 +64,7 @@ Suggests:
     testthat,
     covr,
     doParallel,
-    parallel,
-    devtools
+    parallel
 LinkingTo: 
     Rcpp, 
     RcppArmadillo
