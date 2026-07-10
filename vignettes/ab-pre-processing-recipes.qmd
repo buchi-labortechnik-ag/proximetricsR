@@ -51,9 +51,6 @@ This separation of specification and execution enables reproducible, device-awar
 # Setup
 
 ```{r loadlib, results = 'hide', include = FALSE}
-if (!requireNamespace("proximetricsR", quietly = TRUE)) {
-  devtools::load_all()
-}
 library("proximetricsR")
 ```
 

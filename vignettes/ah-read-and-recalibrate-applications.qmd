@@ -47,9 +47,6 @@ read, exploration and re-calibration of ProxiMate applications.
 #| include: false
 
 # Load package, or use devtools::load_all() if in development
-if (!requireNamespace("proximetricsR", quietly = TRUE)) {
-  devtools::load_all()
-}
 library("proximetricsR")
 ```
 
