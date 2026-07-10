@@ -197,20 +197,20 @@ For RMSE, consider the index where the minimum of all computed RMSE is attained:
 
 \mjdeqn{n_{min} = arg\min_{n} \  RMSE_n}{n_{min} = arg\min_{n} \  RMSE_n},
 
-Then, among all \mjteqn{1 < n < n_{min}}{1 \lt n \lt n_{min}}{1 < n < n_{min}} fulfilling
+Then, among all \mjteqn{1 < n < n_{min}}{1 \lt n \lt n_{min}}{1 \lt n \lt n_{min}} fulfilling
 
-\mjtdeqn{RMSE_{n} < RMSE_{n_{min}} \cdot \gamma_{max}}{RMSE_{n} \lt RMSE_{n_{min}} \cdot \gamma_{max}}{RMSE_{n} < RMSE_{n_{min}} \cdot \gamma_{max}}
+\mjtdeqn{RMSE_{n} < RMSE_{n_{min}} \cdot \gamma_{max}}{RMSE_{n} \lt RMSE_{n_{min}} \cdot \gamma_{max}}{RMSE_{n} \lt RMSE_{n_{min}} \cdot \gamma_{max}}
 
-\mjtdeqn{RMSE_{n} < RMSE_{n+1} \cdot \gamma_{seq}}{RMSE_{n} \lt RMSE_{n+1} \cdot \gamma_{seq}}{RMSE_{n} < RMSE_{n+1} \cdot \gamma_{seq}}
+\mjtdeqn{RMSE_{n} < RMSE_{n+1} \cdot \gamma_{seq}}{RMSE_{n} \lt RMSE_{n+1} \cdot \gamma_{seq}}{RMSE_{n} \lt RMSE_{n+1} \cdot \gamma_{seq}}
 
 we take the smallest \mjeqn{n}{n} as the optimal number of components.\cr
 For \mjeqn{R^2}{R^2}, a similar approach is taken, but with maxima instead of
 minima: \mjeqn{n_{max} = arg\max_{n} R^2_n}{n_{max} = arg\max_{n} R^2_n}
-Then, take the smallest \mjteqn{1 < n < n_{max}}{1 \lt n \lt n_{max}}{1 < n < n_{max}} still satisfying
+Then, take the smallest \mjteqn{1 < n < n_{max}}{1 \lt n \lt n_{max}}{1 \lt n \lt n_{max}} still satisfying
 
-\mjtdeqn{R^2_{n} > R^2_{n_{max}} \cdot \gamma_{max}^{-1}}{R^2_{n} \gt R^2_{n_{max}} \cdot \gamma_{max}^{-1}}{R^2_{n} > R^2_{n_{max}} \cdot \gamma_{max}^{-1}}
+\mjtdeqn{R^2_{n} > R^2_{n_{max}} \cdot \gamma_{max}^{-1}}{R^2_{n} \gt R^2_{n_{max}} \cdot \gamma_{max}^{-1}}{R^2_{n} \gt R^2_{n_{max}} \cdot \gamma_{max}^{-1}}
 
-\mjtdeqn{R^2_{n} > R^2_{n+1} \cdot \gamma_{seq}^{-1}}{R^2_{n} \gt R^2_{n+1} \cdot \gamma_{seq}^{-1}}{R^2_{n} > R^2_{n+1} \cdot \gamma_{seq}^{-1}}
+\mjtdeqn{R^2_{n} > R^2_{n+1} \cdot \gamma_{seq}^{-1}}{R^2_{n} \gt R^2_{n+1} \cdot \gamma_{seq}^{-1}}{R^2_{n} \gt R^2_{n+1} \cdot \gamma_{seq}^{-1}}
 
 Note that in this case, we take the inverse of the learning rates. Furthermore,
 setting \code{learning_rates = c(1, 1)} retains the
