@@ -2,14 +2,14 @@
 
 # `proximetricsR` Spectral preprocessing and chemometric calibration of near-infrared (NIR) sensors
 
-[![R-CMD-check](https://github.com/l-ramirez-lopez/proximetricsR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/l-ramirez-lopez/proximetricsR/actions/workflows/R-CMD-check.yaml)
-[![codecov](https://codecov.io/gh/l-ramirez-lopez/proximetricsR/badge.svg)](https://app.codecov.io/gh/l-ramirez-lopez/proximetricsR)
+[![R-CMD-check](https://github.com/buchi-labortechnik-ag/proximetricsR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/buchi-labortechnik-ag/proximetricsR/actions/workflows/R-CMD-check.yaml)
+[![codecov](https://codecov.io/gh/buchi-labortechnik-ag/proximetricsR/graph/badge.svg)](https://app.codecov.io/gh/buchi-labortechnik-ag/proximetricsR)
 
 <img align="right" src="./man/figures/logo.png" width="15%">
 
 *Last update: 2026-07-10*
 
-Version: 0.6.4 – Saentis
+Version: 0.6.4 – Matterhorn
 
 ## About
 
