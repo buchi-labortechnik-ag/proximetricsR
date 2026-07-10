@@ -42,3 +42,6 @@
 ^figure$
 ^my-test\.json$
 ^Ciso\.html$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
