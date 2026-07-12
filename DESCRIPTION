@@ -64,7 +64,8 @@ Suggests:
     testthat,
     covr,
     doParallel,
-    parallel
+    parallel, 
+    devtools
 LinkingTo: 
     Rcpp, 
     RcppArmadillo

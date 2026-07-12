@@ -27,9 +27,7 @@ vignette: >
 ```{r}
 #| label: setup
 #| include: false
-knitr::opts_chunk$set(
-  eval = requireNamespace("proximetricsR", quietly = TRUE)
-)
+
 # Disable ANSI colours for vignette rendering
 options(cli.num_colors = 1)
 Sys.setenv("RSTUDIO" = "")
@@ -55,14 +53,12 @@ See the ProxiScout Structure vignette for detailed information on application fi
 
 # Setup
 
-
-```{r}
-#| label: loadlib
-#| results: 'hide'
-#| include: False
+```{r loadlib, results = 'hide', include = FALSE}
+if (!requireNamespace("proximetricsR", quietly = TRUE)) {
+  devtools::load_all()
+}
 library("proximetricsR")
 ```
-
 
 ```{r loadlib2, eval = FALSE}
 library("proximetricsR")
@@ -87,13 +83,13 @@ data("NIRsoil", package = "prospectr")
 
 # NIRsoil is in nanometers and absorbance
 mdata <- data.frame(
-  sampleName = rownames(NIRsoil),
-  Ciso = NIRsoil$Ciso,
+  sampleName = rownames(NIRsoil), 
+  Ciso = NIRsoil$Ciso, 
   Nt = NIRsoil$Nt,
   CEC = NIRsoil$CEC
 )
 
-# ProxiScout data comes in reflectance in percentages, so we convert to
+# ProxiScout data comes in reflectance in percentages, so we convert to 
 # reflectance and scale to 0-100 range
 mdata$spc <- 100 * 1 / 10^(NIRsoil$spc)
 
@@ -233,7 +229,7 @@ Define the multiple model fitting methods:
 
 ```{r}
 my_fitting <- list(
-  fit_plsr(ncomp = 12, type = "modified"),
+  fit_plsr(ncomp = 12, type = "modified"), 
   fit_plsr(ncomp = 10, type = "standard")
 )
 ```
@@ -242,10 +238,10 @@ Then, define the how to control the validations. This object will be used for al
 
 ```{r}
 my_control <- calibration_control(
-  validation_type = "kfold",
-  number = 5,
-  remove_outliers = 1,
-  seed = 42
+    validation_type = "kfold",
+    number = 5,
+    remove_outliers = 1,
+    seed = 42
 )
 ```
 
@@ -256,7 +252,7 @@ Finally, build all the models at once:
 #| results: 'hide'
 multiple_models <- calibrate_models(
   formulas = my_formulas,
-  data = mdata,
+  data = mdata, 
   preprocess_recipes = my_recipes,
   methods = my_fitting,
   control = my_control,
@@ -286,13 +282,11 @@ print(multiple_models)
 ```{r serialized2}
 #| eval: false
 proxiscout_write_model(
-  multiple_models$final_models$`Ciso ~ spc`,
-  file = "my_model_c2.json"
+  multiple_models$final_models$`Ciso ~ spc`, file = "my_model_c2.json"
 )
 
 proxiscout_write_model(
-  multiple_models$final_models$`CEC ~ spc`,
-  file = "my_model_cec.json"
+  multiple_models$final_models$`CEC ~ spc`, file = "my_model_cec.json"
 )
 ```
 

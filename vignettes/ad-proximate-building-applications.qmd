@@ -27,9 +27,6 @@ vignette: >
 ```{r}
 #| label: setup
 #| include: false
-knitr::opts_chunk$set(
-  eval = requireNamespace("proximetricsR", quietly = TRUE)
-)
 old_options <- options(digits = 3)
 ```
 
@@ -66,13 +63,11 @@ In the following subsections all these steps will be explained.
 First of all, the `proximetricsR` and the `prospectr` libraries must be
 installed and loaded.
 
-```{r}
-#| label: loadlib
-#| results: 'hide'
-#| include: False
-knitr::opts_chunk$set(
-  eval = requireNamespace("proximetricsR", quietly = TRUE)
-)
+```{r loadlib, results = 'hide', include = FALSE}
+# Load package, or use devtools::load_all() if in development
+if (!requireNamespace("proximetricsR", quietly = TRUE)) {
+  devtools::load_all()
+}
 library("proximetricsR")
 ```
 
@@ -135,27 +130,27 @@ par(mfrow = c(2, 1), mar = c(4, 4, 1, 4))
 y_max <- max(c(max(mdata_1$spc), max(mdata_2$spc)))
 
 matplot(
-  x = original_wavs_1,
-  y = t(mdata_1$spc),
+  x = original_wavs_1, 
+  y = t(mdata_1$spc), 
   xlab = "Wavelengths, nm",
-  ylab = "Absorbance",
-  xlim = c(400, 1700),
+  ylab = "Absorbance", 
+  xlim = c(400, 1700), 
   ylim = c(0, y_max),
-  type = "l",
-  lty = 1,
+  type = "l", 
+  lty = 1, 
   col = rgb(1, 0.5, 0.5, 0.3)
 )
 grid()
 
 matplot(
-  x = original_wavs_2,
-  y = t(mdata_2$spc),
+  x = original_wavs_2, 
+  y = t(mdata_2$spc), 
   xlab = "Wavelengths, nm",
-  ylab = "Absorbance",
-  xlim = c(400, 1700),
+  ylab = "Absorbance", 
+  xlim = c(400, 1700), 
   ylim = c(0, y_max),
-  type = "l",
-  lty = 1,
+  type = "l", 
+  lty = 1, 
   col = rgb(0.9, 0.8, 0.5, 0.3)
 )
 grid()
@@ -190,7 +185,7 @@ same spectral range of the original set of wavelengths).
 ```{r resample}
 # define the vector of new wavelengths (with constant resolution)
 # (replace the psc matrix with the new resampled maxtrix)
-# for working with proximetricsR we need to have our spectra in a spc matrix inside
+# for working with proximetricsR we need to have our spectra in a spc matrix inside 
 # the data matrix
 mdata$spc <- process(mdata$spc, prep_resample(c(900, 1700, 2)), device = "proximate")
 ```
@@ -203,12 +198,12 @@ final_wavs <- as.numeric(colnames(mdata$spc))
 ```{r plotspectra2, fig.cap = "Merged spectra.",  fig.cap.style = "Image Caption", fig.align = "center", fig.width = 8, fig.height = 5, echo = TRUE, fig.retina = 0.85}
 par(old_par)
 matplot(
-  x = final_wavs,
-  y = t(mdata$spc),
+  x = final_wavs, 
+  y = t(mdata$spc), 
   xlab = "Wavelengths, nm",
-  ylab = "Absorbance",
-  type = "l",
-  lty = 1,
+  ylab = "Absorbance", 
+  type = "l", 
+  lty = 1, 
   col = rgb(0.5, 0.5, 0.5, 0.3)
 )
 grid()
@@ -261,7 +256,7 @@ take into account 2 of them (the first two): `r paste0(y_names[1:2], collapse = 
 
 
 ```{r properties3, results = 'hide'}
-# get the names of the response variables
+#get the names of the response variables
 y_names <- y_names[1:2]
 ```
 
@@ -307,7 +302,7 @@ matrix instead of writing the names of the wavelengths. For example:
 ```{r formula1, results = 'hide'}
 f_simple <- Protein ~ spc
 
-# or
+# or 
 
 f_long <- as.formula(paste0("Protein ~ ", paste0(final_wavs, collapse = " + ")))
 ```
@@ -340,10 +335,10 @@ sensor when displaying a predicted value). In this exercise, this is done via:
 ```{r metadata, results = 'hide'}
 # Define the metadata of each model (in the same order they are in app_formulas)
 models_metadata <- list(
-  # for the first property
+  # for the first property 
   add_model_metadata(decimal_places = 2, unit = "%"),
   # for the second property
-  add_model_metadata(decimal_places = 2, unit = "%")
+  add_model_metadata(decimal_places = 2, unit = "%") 
 )
 ```
 
@@ -368,7 +363,7 @@ following lines of code provide an example on how a recipe is built:
 my_precipe_1 <- preprocess_recipe(
   prep_resample(c(900, 1700, 4)),
   prep_snv(),
-  prep_derivative(m = 1, w = 5, p = 9, algorithm = "nwp"),
+  prep_derivative(m = 1, w = 5, p = 9, algorithm = "nwp"), 
   device = "proximate"
 )
 
@@ -383,7 +378,7 @@ Similarly, other recipes can be configured:
 # - StandardNormalVariate
 # - First derivative: with a gap parameter of 7 and a smoothing factor of 11
 my_precipe_2 <- preprocess_recipe(
-  prep_resample(c(900, 1700, 4)),
+  prep_resample(c(900, 1700, 4)), 
   prep_snv(),
   prep_derivative(m = 2, w = 7, p = 11, algorithm = "nwp"),
   device = "proximate"
@@ -396,7 +391,7 @@ my_precipe_2$preprocessing_order
 # - StandardNormalVariate
 # - Second derivative: with a gap parameter of 9 and a smoothing factor of 13
 my_precipe_3 <- preprocess_recipe(
-  prep_resample(c(900, 1700, 4)),
+  prep_resample(c(900, 1700, 4)), 
   prep_snv(),
   prep_derivative(m = 2, w = 9, p = 13, algorithm = "nwp"),
   device = "proximate"
@@ -409,7 +404,7 @@ my_precipe_3$preprocessing_order
 # - StandardNormalVariate
 # - Second derivative: with a gap parameter of 5 and a smoothing factor of 5
 my_precipe_4 <- preprocess_recipe(
-  prep_resample(c(900, 1700, 5)),
+  prep_resample(c(900, 1700, 5)), 
   prep_snv(),
   prep_derivative(m = 2, w = 5, p = 5, algorithm = "nwp"),
   device = "proximate"
@@ -437,7 +432,7 @@ We need to define what regression method is to be used for the calibration of
 the model(s). This can be done as follows:
 
 ```{r rmethod, results = 'show'}
-# here we use the modified pls regression method (equivalent to the one
+# here we use the modified pls regression method (equivalent to the one 
 # implemented in NIRWise PLUS)
 # We use a maximum 11 components
 my_pls_method <- fit_plsr(ncomp = 11, type = "nwp")
@@ -449,7 +444,7 @@ vignette ___Mathematical overview of regression algorithms___ for details on
 both methods).
 
 ```{r rmethodxls, results = 'show'}
-# here we use the modified pls regression method (equivalent to the one
+# here we use the modified pls regression method (equivalent to the one 
 # implemented in NIRWise PLUS)
 # We use a maximum 11 components
 my_xls_method <- fit_xlsr(ncomp = 11)
@@ -469,17 +464,17 @@ and the outlier detection:
 
 ```{r calcontrol, results = 'show'}
 # Control some aspects of how the calibration is built and optimized
-# We use k-fold cross-validation with selection of folds based on the order of
+# We use k-fold cross-validation with selection of folds based on the order of 
 # the samples in the data table ("sequential")
-# We also specify the number of times a model must be re-fitted after outlier
-# removal, e.g. 0 means no re-fiting i.e. no outlier removal; 1 means a model is
-# built, then it is used to identify and remove outliers and finally a the final
-# model is refitted; a value of 5 would mean that the model is refitted 4 times
-# for 4 outlier removal iterations.
+# We also specify the number of times a model must be re-fitted after outlier 
+# removal, e.g. 0 means no re-fiting i.e. no outlier removal; 1 means a model is 
+# built, then it is used to identify and remove outliers and finally a the final 
+# model is refitted; a value of 5 would mean that the model is refitted 4 times 
+# for 4 outlier removal iterations. 
 my_control <- calibration_control(
-  validation_type = "kfold",
+  validation_type = "kfold", 
   number = 4,
-  folds = "sequential",
+  folds = "sequential", 
   remove_outliers = 1 # the number of iterations of outlier removal
 )
 ```
@@ -500,8 +495,8 @@ optimized_app <- calibrate_models(
   data = mdata,
   preprocess_recipes = my_precipes,
   methods = list(my_pls_method, my_xls_method),
-  control = my_control,
-  metadata_list = models_metadata,
+  control = my_control, 
+  metadata_list = models_metadata, 
   save_all = TRUE
 )
 ```
@@ -637,12 +632,12 @@ original_wavs_pred <- as.numeric(colnames(pdata$spc))
 
 ```{r plotspectra3, fig.cap = "Merged spectra.",  fig.cap.style = "Image Caption", fig.align = "center", fig.width = 8, fig.height = 5, echo = TRUE, fig.retina = 0.85}
 matplot(
-  x = original_wavs_pred,
-  y = t(pdata$spc),
+  x = original_wavs_pred, 
+  y = t(pdata$spc), 
   xlab = "Wavelengths, nm",
-  ylab = "Absorbance",
-  type = "l",
-  lty = 1,
+  ylab = "Absorbance", 
+  type = "l", 
+  lty = 1, 
   col = rgb(0.3, 0.9, 0.5, 0.5)
 )
 grid()
@@ -688,7 +683,7 @@ plot(
   pch = 16,
   cex = 1.5,
   col = "grey"
-)
+  )
 grid()
 abline(0, 1, col = "red")
 
@@ -703,7 +698,7 @@ plot(
   pch = 16,
   cex = 1.5,
   col = "grey"
-)
+  )
 grid()
 abline(0, 1, col = "red")
 par(old_par)
@@ -714,12 +709,12 @@ be computed by:
 
 ```{r preds4, eval =  FALSE, results = 'hide'}
 # squared correlations
-cor(x = preds$predictions[, "Moisture"], y = pdata$Moisture)^2
+cor(x = preds$predictions[, "Moisture"],  y = pdata$Moisture)^2
 cor(x = preds$predictions[, "Protein"], y = pdata$Protein)^2
 
 # rmses
 mean((preds$predictions[, "Moisture"] - pdata$Moisture)^2)^0.5
-mean((x <- preds$predictions[, "Protein"] - pdata$Protein)^2)^0.5
+mean((x = preds$predictions[, "Protein"] - pdata$Protein)^2)^0.5
 ```
 
 ## Writting down an application file
@@ -739,9 +734,9 @@ my_models <- optimized_app$final_models
 
 # add some important metadata to the application/model list
 my_models <- add_application_metadata(
-  my_models,
-  view = "Up",
-  name = "my_application",
+  my_models, 
+  view = "Up", 
+  name = "my_application", 
   description = "created with proximetricsR"
 )
 ```
@@ -775,10 +770,10 @@ my_p_recipe <- preprocess_recipe(
 )
 
 protein_model <- calibrate(
-  Protein ~ spc,
-  data = mdata,
+  Protein ~ spc, 
+  data = mdata, 
   preprocess = my_p_recipe, # here we can use only one recipe
-  method = fit_xlsr(5, type = "nwp"),
+  method = fit_xlsr(5, type = "nwp"), 
   control = my_control
 )
 protein_model
@@ -786,7 +781,7 @@ protein_model
 # add the units and the number of decimal places to the model
 protein_model <- add_model_metadata(
   protein_model,
-  unit = "%",
+  unit = "%", 
   decimal_places = 2
 )
 
@@ -811,9 +806,9 @@ my_protein_predictions$predictions
 a_model <- list(protein_model)
 
 a_model <- add_application_metadata(
-  a_model,
-  view = "Up",
-  name = "a_protein_application",
+  a_model, 
+  view = "Up", 
+  name = "a_protein_application", 
   description = "created with proximetricsR"
 )
 
@@ -839,8 +834,8 @@ function. To be able to use such files, it is necessary to have local access to
 the data (.tsv) file containing the calibration data used to fit the models. For example:
 
 ```{r writetsv, eval = FALSE, results = 'hide'}
-# let's write down the calibration data into a tsv file
-# define a name for the tsv to be written
+# let's write down the calibration data into a tsv file 
+# define a name for the tsv to be written 
 tsv_name <- "merged_cal_data.tsv"
 
 # write the tsv

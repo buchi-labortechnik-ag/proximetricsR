@@ -29,10 +29,6 @@ vignette: >
 #| label: setup
 #| include: false
 
-knitr::opts_chunk$set(
-  eval = requireNamespace("proximetricsR", quietly = TRUE)
-)
-
 # Disable ANSI colours for vignette rendering
 options(cli.num_colors = 1)
 Sys.setenv("RSTUDIO" = "")
@@ -45,14 +41,17 @@ old_options <- options(digits = 3)
 This vignette presents a set of experimental functions aimed at facilitating the
 read, exploration and re-calibration of ProxiMate applications.
 
-
 ```{r}
 #| label: loadlib
-#| results: 'hide'
-#| include: False
+#| results: hide
+#| include: false
+
+# Load package, or use devtools::load_all() if in development
+if (!requireNamespace("proximetricsR", quietly = TRUE)) {
+  devtools::load_all()
+}
 library("proximetricsR")
 ```
-
 
 ```{r}
 #| label: loadlib2
@@ -180,7 +179,7 @@ models_metadata <- list(
 my_precipe_1 <- preprocess_recipe(
   prep_resample(c(900, 1700, 4)),
   prep_snv(),
-  prep_derivative(m = 1, w = 5, p = 9, algorithm = "nwp"),
+  prep_derivative(m = 1, w = 5, p = 9, algorithm = "nwp"), 
   device = "proximate"
 )
 
@@ -193,7 +192,7 @@ my_precipe_1$preprocessing_order
 my_precipe_2 <- preprocess_recipe(
   prep_resample(c(900, 1700, 4)),
   prep_snv(),
-  prep_derivative(m = 2, w = 7, p = 11, algorithm = "nwp"),
+  prep_derivative(m = 2, w = 7, p = 11, algorithm = "nwp"), 
   device = "proximate"
 )
 
@@ -206,7 +205,7 @@ my_precipe_2$preprocessing_order
 my_precipe_3 <- preprocess_recipe(
   prep_resample(c(900, 1700, 4)),
   prep_snv(),
-  prep_derivative(m = 2, w = 9, p = 13, algorithm = "nwp"),
+  prep_derivative(m = 2, w = 9, p = 13, algorithm = "nwp"), 
   device = "proximate"
 )
 
@@ -230,17 +229,17 @@ my_pls_method
 ```{r}
 #| label: calcontrol
 # Control some aspects of how the calibration is built and optimized
-# We use k-fold cross-validation with selection of folds based on the order of
+# We use k-fold cross-validation with selection of folds based on the order of 
 # the samples in the data table ("sequential")
-# We also specify the number of times a model must be re-fitted after outlier
-# removal, e.g. 0 means no re-fiting i.e. no outlier removal; 1 means a model is
-# built, then it is used to identify and remove outliers and finally a the final
-# model is refitted; a value of 5 would mean that the model is refitted 4 times
-# for 4 outlier removal iterations.
+# We also specify the number of times a model must be re-fitted after outlier 
+# removal, e.g. 0 means no re-fiting i.e. no outlier removal; 1 means a model is 
+# built, then it is used to identify and remove outliers and finally a the final 
+# model is refitted; a value of 5 would mean that the model is refitted 4 times 
+# for 4 outlier removal iterations. 
 my_control <- calibration_control(
-  validation_type = "kfold",
+  validation_type = "kfold", 
   number = 4,
-  folds = "sequential",
+  folds = "sequential", 
   remove_outliers = 1 # the number of iterations of outlier removal
 )
 ```
@@ -254,8 +253,8 @@ optimized_app <- calibrate_models(
   data = mdata,
   preprocess_recipes = my_precipes,
   methods = list(my_pls_method),
-  control = my_control,
-  metadata_list = models_metadata,
+  control = my_control, 
+  metadata_list = models_metadata, 
   save_all = TRUE
 )
 ```
@@ -284,9 +283,9 @@ my_models <- optimized_app$final_models
 
 # add some important metadata to the application/model list
 my_models <- add_application_metadata(
-  my_models,
-  view = "Up",
-  name = "my_application",
+  my_models, 
+  view = "Up", 
+  name = "my_application", 
   description = "created with proximetricsR"
 )
 
@@ -301,7 +300,7 @@ proximate_write_nax(
 Simple:
 
 ```{r}
-#| label: readnax
+#| label: readnax 
 #| echo: true
 #| eval: true
 #| results: hide
