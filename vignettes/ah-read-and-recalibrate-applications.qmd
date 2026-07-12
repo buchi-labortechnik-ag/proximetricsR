@@ -29,6 +29,10 @@ vignette: >
 #| label: setup
 #| include: false
 
+knitr::opts_chunk$set(
+  eval = requireNamespace("proximetricsR", quietly = TRUE)
+)
+
 # Disable ANSI colours for vignette rendering
 options(cli.num_colors = 1)
 Sys.setenv("RSTUDIO" = "")
@@ -46,9 +50,6 @@ read, exploration and re-calibration of ProxiMate applications.
 #| label: loadlib
 #| results: 'hide'
 #| include: False
-knitr::opts_chunk$set(
-  eval = requireNamespace("proximetricsR", quietly = TRUE)
-)
 library("proximetricsR")
 ```
 
