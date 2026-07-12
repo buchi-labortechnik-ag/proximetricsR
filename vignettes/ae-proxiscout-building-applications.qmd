@@ -53,9 +53,15 @@ See the ProxiScout Structure vignette for detailed information on application fi
 
 # Setup
 
-```{r loadlib, results = 'hide', include = FALSE}
+
+```{r}
+#| label: loadlib
+#| results: 'hide'
+#| include: False
+#| eval: !expr requireNamespace("proximetricsR", quietly = TRUE)
 library("proximetricsR")
 ```
+
 
 ```{r loadlib2, eval = FALSE}
 library("proximetricsR")

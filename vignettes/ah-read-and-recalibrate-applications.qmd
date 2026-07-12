@@ -41,14 +41,15 @@ old_options <- options(digits = 3)
 This vignette presents a set of experimental functions aimed at facilitating the
 read, exploration and re-calibration of ProxiMate applications.
 
+
 ```{r}
 #| label: loadlib
-#| results: hide
-#| include: false
-
-# Load package, or use devtools::load_all() if in development
+#| results: 'hide'
+#| include: False
+#| eval: !expr requireNamespace("proximetricsR", quietly = TRUE)
 library("proximetricsR")
 ```
+
 
 ```{r}
 #| label: loadlib2

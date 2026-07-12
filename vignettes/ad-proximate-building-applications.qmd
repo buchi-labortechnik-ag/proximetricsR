@@ -63,7 +63,11 @@ In the following subsections all these steps will be explained.
 First of all, the `proximetricsR` and the `prospectr` libraries must be
 installed and loaded.
 
-```{r loadlib, results = 'hide', include = FALSE}
+```{r}
+#| label: loadlib
+#| results: 'hide'
+#| include: False
+#| eval: !expr requireNamespace("proximetricsR", quietly = TRUE)
 library("proximetricsR")
 ```
 

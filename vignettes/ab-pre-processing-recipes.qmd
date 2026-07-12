@@ -50,9 +50,14 @@ This separation of specification and execution enables reproducible, device-awar
 
 # Setup
 
-```{r loadlib, results = 'hide', include = FALSE}
+```{r}
+#| label: loadlib
+#| results: 'hide'
+#| include: False
+#| eval: !expr requireNamespace("proximetricsR", quietly = TRUE)
 library("proximetricsR")
 ```
+
 
 ```{r loadlib2, eval = FALSE}
 library("proximetricsR")
