@@ -65,7 +65,7 @@ Suggests:
     covr,
     doParallel,
     parallel, 
-    devtools
+    pkgload
 LinkingTo: 
     Rcpp, 
     RcppArmadillo

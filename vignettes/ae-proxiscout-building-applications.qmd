@@ -55,7 +55,7 @@ See the ProxiScout Structure vignette for detailed information on application fi
 
 ```{r loadlib, results = 'hide', include = FALSE}
 if (!requireNamespace("proximetricsR", quietly = TRUE)) {
-  devtools::load_all()
+  pkgload::load_all()
 }
 library("proximetricsR")
 ```
