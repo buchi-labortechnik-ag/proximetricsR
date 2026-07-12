@@ -9,11 +9,14 @@ src/*.dll
 src/Makevars.omp
 src-i386/
 src-x64/
+
 # Build and package infrastructure
 /doc/
 /Meta/
 docs
+pkgdown/
 packrat/lib*/
+
 # Vignette outputs
 vignettes/*.html
 vignettes/*_files/
