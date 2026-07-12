@@ -58,7 +58,9 @@ See the ProxiScout Structure vignette for detailed information on application fi
 #| label: loadlib
 #| results: 'hide'
 #| include: False
-#| eval: !expr requireNamespace("proximetricsR", quietly = TRUE)
+knitr::opts_chunk$set(
+  eval = requireNamespace("proximetricsR", quietly = TRUE)
+)
 library("proximetricsR")
 ```
 

@@ -46,7 +46,9 @@ read, exploration and re-calibration of ProxiMate applications.
 #| label: loadlib
 #| results: 'hide'
 #| include: False
-#| eval: !expr requireNamespace("proximetricsR", quietly = TRUE)
+knitr::opts_chunk$set(
+  eval = requireNamespace("proximetricsR", quietly = TRUE)
+)
 library("proximetricsR")
 ```
 
