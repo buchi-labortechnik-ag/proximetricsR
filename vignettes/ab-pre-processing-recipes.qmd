@@ -28,6 +28,10 @@ vignette: >
 #| label: setup
 #| include: false
 
+knitr::opts_chunk$set(
+  eval = requireNamespace("proximetricsR", quietly = TRUE)
+)
+
 # Disable ANSI colours for vignette rendering
 options(cli.num_colors = 1)
 Sys.setenv("RSTUDIO" = "")
@@ -50,21 +54,6 @@ This separation of specification and execution enables reproducible, device-awar
 
 # Setup
 
-
-```{r}
-#| label: setup
-#| include: false
-
-knitr::opts_chunk$set(
-  eval = requireNamespace("proximetricsR", quietly = TRUE)
-)
-
-# Disable ANSI colours for vignette rendering
-options(cli.num_colors = 1)
-Sys.setenv("RSTUDIO" = "")
-Sys.setenv("POSITRON" = "")
-old_options <- options(digits = 3)
-```
 
 
 ```{r}
