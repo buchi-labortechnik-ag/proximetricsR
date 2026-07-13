@@ -306,5 +306,6 @@ sgf <- function(p, n, m = 0) {
   if (m > 0) {
     Fm <- Fm * prod(1:m)
   }
+  Fm[abs(Fm) < 1e-10] <- 0 
   Fm
 }
