@@ -27,6 +27,6 @@ pkg_info <- function(pkg = "proximetricsR") {
     "\033[39m"
   )
   packageStartupMessage(mss)
-  packageStartupMessage("\033[0;32mAn R package for modeling NIR data - BUCHI Labortechnik AG\033[39m")
+  packageStartupMessage("\033[1;38;5;71mAn R package for modeling NIR data - BUCHI Labortechnik AG\033[0m")
   packageStartupMessage(mss2)
 }
