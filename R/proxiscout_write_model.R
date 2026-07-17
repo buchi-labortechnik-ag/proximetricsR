@@ -89,6 +89,8 @@ proxiscout_write_model <- function(object, file = NULL) {
   if (!object$preprocess$steps[[1]]$method %in% c("prep_resample")) {
     stop("The first preprocessing step must be 'prep_resample()'.")
   }
+  
+  mpreceision <- 7
 
   # neospectra wavenumbers
   hw_wavs <- get_proxiscout_wavenumbers()
@@ -213,7 +215,7 @@ proxiscout_write_model <- function(object, file = NULL) {
     list(
       list(
         id = 43,
-        params = as.list(as.numeric(format(as.vector(object$final_model$model$x_means), nsmall = 10))),
+        params = as.list(round(as.vector(object$final_model$model$x_means), mpreceision)),
         index = count
       )
     )
@@ -223,7 +225,7 @@ proxiscout_write_model <- function(object, file = NULL) {
     object$final_model$model$intercept,
     object$final_model$model$coefficients[object$final_model$ncomp, ]
   )
-  my_model <- as.vector(my_model)
+  my_model <- round(as.vector(my_model), mpreceision)
   json_output <- append(
     json_output,
     list(
