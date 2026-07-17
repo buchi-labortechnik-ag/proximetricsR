@@ -1,3 +1,10 @@
+proximetricsR 0.6.5
+===============
+
+* Docs: fixed unescaped "<" characters in mathematical notation within `calibration_control.Rd`, which caused HTML validation errors on CRAN.
+
+* Tests: added unit tests for `proxiscout_write_model()` to guarantee the integrity of ProxiScout model serialisation across preprocessing recipes.
+
 proximetricsR 0.6.4
 ===============
 * Hello world!
