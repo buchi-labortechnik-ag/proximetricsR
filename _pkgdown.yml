@@ -1,4 +1,16 @@
 url: https://buchi-labortechnik-ag.github.io/proximetricsR/
 template:
-  bootstrap: 5 
+  bootstrap: 5
+articles:
+  - title: All vignettes
+    contents:
+      - aa-intro
+      - ab-pre-processing-recipes
+      - ac-mathematical-overview-of-regression-algorithms
+      - ad-proximate-building-applications
+      - ae-proxiscout-building-applications
+      - af-proximate-structure-of-the-applications
+      - ag-proxiscout-structure-of-the-applications
+      - ah-read-and-recalibrate-applications
+      
   
