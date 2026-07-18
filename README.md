@@ -7,7 +7,7 @@
 [![CRAN
 status](https://www.r-pkg.org/badges/version/proximetricsR?v=2.png)](https://CRAN.R-project.org/package=proximetricsR)
 
-<img align="right" src="./man/figures/logo.png" alt="proximetricsR logo" width="15%">
+<img align="right" src="./man/figures/logo.png" alt="proximetricsR logo" width="25%">
 
 *Last update: 2026-07-19*
 
