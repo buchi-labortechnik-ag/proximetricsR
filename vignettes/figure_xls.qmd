@@ -1,5 +1,7 @@
 ---
 title: "XLS figure for Mathematical overview of regression algorithms"
+pkgdown:
+  ignore: true
 author: 
  - name: Claudio Orellano and Leonardo Ramirez- Lopez
    email: orellano.c@buchi.com
