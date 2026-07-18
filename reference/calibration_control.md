@@ -1,0 +1,592 @@
+# A function that controls the calibration of models
+
+This function is used to further control some aspects of the calibration
+of models (with the
+[`calibrate`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/calibrate.md)
+function) such as cross-validation and outlier detection.
+
+## Usage
+
+``` r
+calibration_control(validation_type = c("lgo", "loo", "kfold", "none"),
+                    number = ifelse(validation_type == "lgo", 100, 10),
+                    p = 0.75,
+                    folds = c("random", "sequential"),
+                    tuning_parameter = c("rmse", "rsq", "none"),
+                    learning_rates = c(maximum = 1.1, sequential = 1.05),
+                    remove_outliers = 0,
+                    cal_residual_limit = 2.5,
+                    mahalanobis_limit = 5,
+                    val_residual_limit = 3.5,
+                    allow_parallel = TRUE,
+                    fix_pls_factors = TRUE,
+                    fixed_components = 0,
+                    replacements = TRUE,
+                    seed = NULL)
+```
+
+## Arguments
+
+- validation_type:
+
+  a character string indicating the type of cross-validation (cv) to be
+  conducted. Options are: `"lgo"` for leave-group-out cv (default),
+  `"loo"` for leave-one-out cv and `"kfold"` for k-fold cv. See details.
+
+- number:
+
+  an integer indicating the number of sampling iterations or sub-sample
+  groups for the selected `validation_type` argument. Default is `100`
+  for leave-group out cv and `10` for k-fold cross-validation. This
+  parameter is ignored for leave-one-out cv.
+
+- p:
+
+  a numeric value indicating the percentage of calibration observations
+  to be retained at each sampling iteration at each local segment when
+  `"lgo"` is selected in the `validation_type` argument. Default is 0.75
+  (i.e. 75 percent of the observations).
+
+- folds:
+
+  a character string indicating the way folds are created (valid only
+  when `validation_type = "kfold"`). Options are: `"random"` (default)
+  or `"sequential"`.
+
+- tuning_parameter:
+
+  a character string indicating which cross-validation statistic to use
+  for the optimization of the included number of components. Options
+  are: `"rmse"` (default, minimization of the root mean squared error),
+  `"rsq"` (maximization of the coefficient of determination) or `"none"`
+  (no tuning). Does not apply when `validation_type = "none"`.
+
+- learning_rates:
+
+  a vector of length 2 for additional control over the selection of the
+  optimal number of components. See details for its use. Defaults to
+  `c(1.1, 1.05)`.
+
+- remove_outliers:
+
+  an integer indicating the number of times the model should
+  automatically detect and remove outliers. Each time, a new model is
+  fitted with the outliers removed, until either no more outliers are
+  found or the `remove_outliers` has been reached. Outliers found and
+  removed in each step, as well as the first and last computed models
+  are recorded. Outliers are detected based on the limits set in the
+  arguments `cal_residual_limit`, `mahalanobis_limit` and
+  `val_residual_limit`. Setting `remove_outliers` to `0` (default)
+  disables automatic outlier removal, whereas selecting it as `Inf`
+  removes outliers until no more are found.
+
+- cal_residual_limit:
+
+  a numeric value which indicates the upper limit of the standardized
+  residuals for the fitted response variable. Observations with absolute
+  residuals above this limit are labeled as `"calibration outliers"`.
+  The standardized calibration residuals are calculated as the absolute
+  differences between the reference values and their corresponding
+  fitted values divided by the standard deviation of these absolute
+  differences. Default is 2.5 (as in NIRWise PLUS calibration software).
+
+- mahalanobis_limit:
+
+  a numeric value which indicates the upper limit of the squared
+  Mahalanobis distances of each sample in the score space to zero.
+  Observations with squared Mahalanobis distance above this limit are
+  labeled as `"Mahalanobis outliers"`. The squared Mahalanobis distances
+  are calculated as the squared Euclidean distance of the standardized
+  scores to the origin. Default is 5 (as in NIRWise PLUS calibration
+  software).
+
+- val_residual_limit:
+
+  a numeric value which indicates the upper limit of the standardized
+  residuals for cross-validation predictions of the response variable.
+  This applies only to `"kfold"` or `"loo"` cross-validation.
+  Observations with absolute residuals above this limit are labeled as
+  `"validation outliers"`. The standardized validation residuals are
+  calculated as the absolute differences between the reference values
+  and their corresponding cross-validated predictions divided by the
+  standard deviation of these absolute differences. Default is 3.5 (as
+  in NIRWise PLUS calibration software).
+
+- allow_parallel:
+
+  a logical indicating if parallel execution is allowed. If `TRUE`,
+  parallelization is applied to the cross-validation procedure. The
+  parallelization of this for loop is implemented using the
+  [`foreach`](https://rdrr.io/pkg/foreach/man/foreach.html) function of
+  the `foreach` package. Default is `TRUE`.
+
+- fix_pls_factors:
+
+  a logical. This parameter only has an influence on the produced
+  application files, where it indicates whether the final number of
+  factors of the model should be fixed. Note that this has no influence
+  on the model in R itself, as the optimal number of components inside
+  the model remains the same (but it does influence the exported files).
+  Default is `TRUE`.
+
+- fixed_components:
+
+  a numerical value indicating a fixed number of components to be used
+  in the model (i.e. no optimization of the components). The default
+  value is `0`, which indicates that the number of components is not
+  fixed and it uses the one selected by the function.
+
+- replacements:
+
+  a logical. Only used in case `validation_type` is selected as `"lgo"`.
+  Specifies if the sampling for the calibration sets must be done with
+  replacements. See details for a more thorough explanation. Defaults to
+  `TRUE`.
+
+- seed:
+
+  an integer that can be used in any of the validation methods to obtain
+  reproducible results, using the
+  [`set.seed`](https://rdrr.io/r/base/Random.html) function. In case it
+  is selected as `NULL`, no seed will be set. Note that the seed will
+  not be reset, and future random computations can be affected.
+  Furthermore, this parameter is meant as a way to provide
+  reproducibility, and should not be used to simply select the seed with
+  the best results. Default is `NULL`.
+
+## Value
+
+a list of class `calibration_control` mirroring the specified parameters
+
+## Details
+
+This package extends the cross-validation methods implemented in the
+NIRWise PLUS software, which is based only on k-fold cross validation.
+
+The validation methods available for assessing the predictive
+performance of the models are:
+
+- **Leave-group-out cross-validation (`"lgo"`):** The data is
+  partitioned into different subsets of similar size. Each partition is
+  based on a stratified random sampling using the distribution of the
+  response variable. When `p` \\\ge\\ 0.5 (i.e. the number of
+  calibration observations to retain is larger than 50% of the total
+  samples), the sampling is conducted for selecting the validation
+  samples, and when `p` is below 0.5 the sampling is conducted for
+  selecting the calibration samples (samples used for model training).
+  The model fitted with the selected calibration samples is used to
+  predict the target response variable values of the validation samples.
+  The accuracy and precision, indicated by the root mean square error
+  (RMSE) and the coefficient of determination (\\R^2\\) respectively,
+  are computed. This process is repeated \\m\\ times (where \\m\\ is
+  controlled by the `number` argument), and the final RMSE and \\R^2\\
+  are computed as the average over all respective results of the \\m\\
+  iterations. In case the parameter `replacements` is set to `TRUE`, the
+  selection of the calibration sets is done by using sampling with
+  replacement.
+
+- **Leave-one-out cross-validation (`"loo"`):** The number of iterations
+  is equal to the number of observations in the calibration set. In each
+  iteration, one single observation is held out, while the remaining
+  samples are used to fit a model, which is used to predict the response
+  variable of the held out observation. The predictions are then
+  compared to the reference ones and both the RMSE and the (\\R^2\\) are
+  computed.
+
+- **k-fold cross-validation (`"kfold"`):** The data is split (either
+  randomly or sequentially) into \\k\\ disjoint blocks of similar size,
+  where \\k\\ is controlled by `number`. In the sequential splits, every
+  block \\B_i\\ is selected as follows:
+
+  \\B_i = \lbrace i + k(j - 1) \| j \in N, \\ i + k(j - 1) \leq n
+  \rbrace\\
+
+  where \\n\\ is the total number of observations. In other words, the
+  observations are put sequentially into the blocks until all
+  observations have a block assigned.  
+  A total of \\k\\ iterations is conducted. In each iteration, one block
+  is considered as the validation set, while the remaining samples are
+  used to fit a model, which is then used to predict the response
+  variable of the held-out block.  
+  The number observations in each block is given by the total number of
+  observations divided by the number of blocks. Note that the maximum
+  number of folds is limited to half of the number of observations. Note
+  also that this implementation of k-fold cross-validation is an
+  improved version of the one in the NIRWise PLUS software, where only
+  the sequential sample selection is supported.
+
+- **No validation (`"none"`):** No validation is carried out.
+
+For each validation type (except `"none"`), the optimal number of
+factors is not necessarily chosen to be the minimum of RMSE or the
+maximum of \\R^2\\ (depending on the `tuning_parameter`). Instead, since
+both are often monotonically decreasing respectively monotonically
+increasing as the number of components increases, an additional
+parameter `learning_rates` \\\gamma\\ for fine-tuning of the
+determination of the number of factors is included:
+
+For RMSE, consider the index where the minimum of all computed RMSE is
+attained:
+
+\\n\_{min} = arg\min\_{n} \\ RMSE_n\\,
+
+Then, among all \\1 \lt n \lt n\_{min}\\ fulfilling
+
+\\RMSE\_{n} \lt RMSE\_{n\_{min}} \cdot \gamma\_{max}\\
+
+\\RMSE\_{n} \lt RMSE\_{n+1} \cdot \gamma\_{seq}\\
+
+we take the smallest \\n\\ as the optimal number of components.  
+For \\R^2\\, a similar approach is taken, but with maxima instead of
+minima: \\n\_{max} = arg\max\_{n} R^2_n\\ Then, take the smallest \\1
+\lt n \lt n\_{max}\\ still satisfying
+
+\\R^2\_{n} \gt R^2\_{n\_{max}} \cdot \gamma\_{max}^{-1}\\
+
+\\R^2\_{n} \gt R^2\_{n+1} \cdot \gamma\_{seq}^{-1}\\
+
+Note that in this case, we take the inverse of the learning rates.
+Furthermore, setting `learning_rates = c(1, 1)` retains the global
+minimum for RMSE, respectively maximum for \\R^2\\.
+
+## See also
+
+[`calibrate`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/calibrate.md),
+[`calibrate_models`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/calibrate_models.md)
+
+## Author
+
+Leonardo Ramirez-Lopez
+
+## Examples
+
+``` r
+
+# 5-fold cross-validation with sequential sampling
+calibration_control(
+  validation_type = "kfold",
+  number = 5,
+  folds = "sequential"
+)
+#> $validation_type
+#> [1] "kfold"
+#> 
+#> $number
+#> [1] 5
+#> 
+#> $p
+#> [1] 0.75
+#> 
+#> $folds
+#> [1] "sequential"
+#> 
+#> $tuning_parameter
+#> [1] "rmse"
+#> 
+#> $learning_rates
+#>    maximum sequential 
+#>       1.10       1.05 
+#> 
+#> $remove_outliers
+#> [1] 0
+#> 
+#> $cal_residual_limit
+#> [1] 2.5
+#> 
+#> $mahalanobis_limit
+#> [1] 5
+#> 
+#> $val_residual_limit
+#> [1] 3.5
+#> 
+#> $allow_parallel
+#> [1] TRUE
+#> 
+#> $fix_pls_factors
+#> [1] TRUE
+#> 
+#> $fixed_components
+#> [1] 0
+#> 
+#> $replacements
+#> [1] TRUE
+#> 
+#> $seed
+#> NULL
+#> 
+#> attr(,"class")
+#> [1] "calibration_control" "list"               
+
+# leave-one-out cross_validation
+calibration_control(validation_type = "loo")
+#> $validation_type
+#> [1] "loo"
+#> 
+#> $number
+#> [1] 10
+#> 
+#> $p
+#> [1] 0.75
+#> 
+#> $folds
+#> [1] "random"
+#> 
+#> $tuning_parameter
+#> [1] "rmse"
+#> 
+#> $learning_rates
+#>    maximum sequential 
+#>       1.10       1.05 
+#> 
+#> $remove_outliers
+#> [1] 0
+#> 
+#> $cal_residual_limit
+#> [1] 2.5
+#> 
+#> $mahalanobis_limit
+#> [1] 5
+#> 
+#> $val_residual_limit
+#> [1] 3.5
+#> 
+#> $allow_parallel
+#> [1] TRUE
+#> 
+#> $fix_pls_factors
+#> [1] TRUE
+#> 
+#> $fixed_components
+#> [1] 0
+#> 
+#> $replacements
+#> [1] TRUE
+#> 
+#> $seed
+#> NULL
+#> 
+#> attr(,"class")
+#> [1] "calibration_control" "list"               
+
+# 100 leave-group-out validations with 60% samples retained, with replacements
+calibration_control(
+  validation_type = "lgo",
+  number = 100,
+  p = 0.6,
+  replacements = TRUE
+)
+#> $validation_type
+#> [1] "lgo"
+#> 
+#> $number
+#> [1] 100
+#> 
+#> $p
+#> [1] 0.6
+#> 
+#> $folds
+#> [1] "random"
+#> 
+#> $tuning_parameter
+#> [1] "rmse"
+#> 
+#> $learning_rates
+#>    maximum sequential 
+#>       1.10       1.05 
+#> 
+#> $remove_outliers
+#> [1] 0
+#> 
+#> $cal_residual_limit
+#> [1] 2.5
+#> 
+#> $mahalanobis_limit
+#> [1] 5
+#> 
+#> $val_residual_limit
+#> [1] 3.5
+#> 
+#> $allow_parallel
+#> [1] TRUE
+#> 
+#> $fix_pls_factors
+#> [1] TRUE
+#> 
+#> $fixed_components
+#> [1] 0
+#> 
+#> $replacements
+#> [1] TRUE
+#> 
+#> $seed
+#> NULL
+#> 
+#> attr(,"class")
+#> [1] "calibration_control" "list"               
+
+# 2-fold leave-group-out cross-validation with 75% samples retained, no replacements
+calibration_control(
+  validation_type = "lgo",
+  number = 2,
+  p = 0.75,
+  replacements = FALSE
+)
+#> $validation_type
+#> [1] "lgo"
+#> 
+#> $number
+#> [1] 2
+#> 
+#> $p
+#> [1] 0.75
+#> 
+#> $folds
+#> [1] "random"
+#> 
+#> $tuning_parameter
+#> [1] "rmse"
+#> 
+#> $learning_rates
+#>    maximum sequential 
+#>       1.10       1.05 
+#> 
+#> $remove_outliers
+#> [1] 0
+#> 
+#> $cal_residual_limit
+#> [1] 2.5
+#> 
+#> $mahalanobis_limit
+#> [1] 5
+#> 
+#> $val_residual_limit
+#> [1] 3.5
+#> 
+#> $allow_parallel
+#> [1] TRUE
+#> 
+#> $fix_pls_factors
+#> [1] TRUE
+#> 
+#> $fixed_components
+#> [1] 0
+#> 
+#> $replacements
+#> [1] FALSE
+#> 
+#> $seed
+#> NULL
+#> 
+#> attr(,"class")
+#> [1] "calibration_control" "list"               
+
+# Same as before, but removing any outlier that is found
+calibration_control(
+  validation_type = "lgo",
+  number = 2,
+  p = 0.75,
+  replacements = FALSE,
+  remove_outliers = Inf
+)
+#> $validation_type
+#> [1] "lgo"
+#> 
+#> $number
+#> [1] 2
+#> 
+#> $p
+#> [1] 0.75
+#> 
+#> $folds
+#> [1] "random"
+#> 
+#> $tuning_parameter
+#> [1] "rmse"
+#> 
+#> $learning_rates
+#>    maximum sequential 
+#>       1.10       1.05 
+#> 
+#> $remove_outliers
+#> [1] Inf
+#> 
+#> $cal_residual_limit
+#> [1] 2.5
+#> 
+#> $mahalanobis_limit
+#> [1] 5
+#> 
+#> $val_residual_limit
+#> [1] 3.5
+#> 
+#> $allow_parallel
+#> [1] TRUE
+#> 
+#> $fix_pls_factors
+#> [1] TRUE
+#> 
+#> $fixed_components
+#> [1] 0
+#> 
+#> $replacements
+#> [1] FALSE
+#> 
+#> $seed
+#> NULL
+#> 
+#> attr(,"class")
+#> [1] "calibration_control" "list"               
+# \donttest{
+# no validation, gives warning
+calibration_control(validation_type = "none")
+#> Warning: Cross-validation is required for model tuning, parameter tuning will not be conducted
+#> $validation_type
+#> [1] "none"
+#> 
+#> $number
+#> [1] 10
+#> 
+#> $p
+#> [1] 0.75
+#> 
+#> $folds
+#> [1] "random"
+#> 
+#> $tuning_parameter
+#> [1] "rmse"
+#> 
+#> $learning_rates
+#>    maximum sequential 
+#>       1.10       1.05 
+#> 
+#> $remove_outliers
+#> [1] 0
+#> 
+#> $cal_residual_limit
+#> [1] 2.5
+#> 
+#> $mahalanobis_limit
+#> [1] 5
+#> 
+#> $val_residual_limit
+#> [1] 3.5
+#> 
+#> $allow_parallel
+#> [1] TRUE
+#> 
+#> $fix_pls_factors
+#> [1] TRUE
+#> 
+#> $fixed_components
+#> [1] 0
+#> 
+#> $replacements
+#> [1] TRUE
+#> 
+#> $seed
+#> NULL
+#> 
+#> attr(,"class")
+#> [1] "calibration_control" "list"               
+# }
+```
