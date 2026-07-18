@@ -11,9 +11,16 @@ pkg_info <- function(pkg = "proximetricsR") {
   pinfo
 }
 
+pkg_info2 <- function(pkg = "proximetricsR") {
+  fld <- c("Version", "Config/VersionName", "BugReports")
+  pinfo <- read.dcf(system.file("DESCRIPTION", package = pkg), fields = fld)
+  pinfo[,"BugReports"] <- gsub("/issues", "", pinfo[,"BugReports"])
+  pinfo
+}
+
 
 .onAttach <- function(lib, pkg) {
-  pkg_v <- pkg_info()
+  pkg_v <- pkg_info2()
 
   mss <- paste0(
     "\033[34m",
@@ -23,7 +30,7 @@ pkg_info <- function(pkg = "proximetricsR") {
   )
   mss2 <- paste0(
     "\033[34mCheck the package repository at: ",
-    pkg_v[, "URL"],
+    pkg_v[, "BugReports"],
     "\033[39m"
   )
   packageStartupMessage(mss)

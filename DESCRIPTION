@@ -1,8 +1,8 @@
 Package: proximetricsR
 Type: Package
 Title: Spectral Preprocessing and Chemometric Calibration of NIR Sensors
-Version: 0.6.5
-Date: 2026-07-17
+Version: 0.6.6
+Date: 2026-07-19
 Authors@R: c(
     person(given = "Leonardo",
            family = "Ramirez-Lopez",
@@ -32,7 +32,7 @@ Authors@R: c(
 Maintainer: 
     Leonardo Ramirez-Lopez <ramirez-lopez.l@buchi.com>
 BugReports: 
-    https://github.com/l-ramirez-lopez/proximetricsr/issues
+    https://github.com/buchi-labortechnik-ag/proximetricsr/issues
 Description: Provides tools to build quantitative chemometric models and
     applications for near-infrared (NIR) sensors. Chemometric regression
     models are based on partial least squares regression as described by
@@ -41,7 +41,7 @@ Description: Provides tools to build quantitative chemometric models and
     (1991) <doi:10.2135/cropsci1991.0011183X003100020049x>, with further
     discussion by Westerhaus (2014) <doi:10.1255/nirn.1492>.
 License: MIT + file LICENSE
-URL: https://github.com/l-ramirez-lopez/proximetricsr
+URL: https://buchi-labortechnik-ag.github.io/proximetricsR/https://github.com/l-ramirez-lopez/proximetricsr
 VignetteBuilder: quarto
 Depends:
     R (>= 4.2.0)
@@ -75,6 +75,6 @@ LazyData: true
 LazyDataCompression: xz
 Encoding: UTF-8
 Config/testthat/edition: 3
-Config/VersionName: Matterhorn
+Config/VersionName: Matterhorn2
 Config/roxygen2/version: 8.0.0
 Config/roxygen2/markdown: TRUE

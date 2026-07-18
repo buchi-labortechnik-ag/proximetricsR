@@ -15,7 +15,7 @@ bibentry(bibtype = "Manual",
   ),
   year = year,
   note = vers,
-  url = "https://github.com/l-ramirez-lopez/proximetricsr",
+  url = "https://github.com/buchi-labortechnik-ag/proximetricsr",
 
   textVersion =
   paste("Ramirez-Lopez, L., Orellano, C., Cudlenco, N., Said, M., and Abushosha, M. (",

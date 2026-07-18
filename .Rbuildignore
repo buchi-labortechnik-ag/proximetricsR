@@ -45,3 +45,5 @@
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
+
+^vignettes/\.quarto$

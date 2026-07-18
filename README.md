@@ -7,11 +7,11 @@
 [![CRAN
 status](https://www.r-pkg.org/badges/version/proximetricsR?v=2.png)](https://CRAN.R-project.org/package=proximetricsR)
 
-<img align="right" src="./man/figures/logo.png" width="15%">
+<img align="right" src="./man/figures/logo.png" alt="proximetricsR logo" width="15%">
 
-*Last update: 2026-07-17*
+*Last update: 2026-07-19*
 
-Version: 0.6.5 – Matterhorn
+Version: 0.6.5 – Matterhorn2
 
 ## About
 
@@ -250,7 +250,7 @@ help(package = "proximetricsR")
 For bug reports, feature requests, and discussions, please create an
 issue on GitHub:
 
-https://github.com/l-ramirez-lopez/proximetricsr/issues
+https://github.com/buchi-labortechnik-ag/proximetricsR/issues
 
 For questions, contact:
 
