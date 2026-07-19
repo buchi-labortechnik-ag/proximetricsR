@@ -13,7 +13,11 @@ engine: knitr
 [![CRAN status](https://www.r-pkg.org/badges/version/proximetricsR?v=2)](https://CRAN.R-project.org/package=proximetricsR)
 
 
-<img align="right" src="./man/figures/logo.png" alt="proximetricsR logo" width="25%">
+<div style="display: flex; align-items: center; justify-content: space-between;">
+  <img src="./man/figures/logo.png" alt="proximetricsR logo" width="25%">
+</div>
+
+
 
 _Last update: `r Sys.Date()`_
 

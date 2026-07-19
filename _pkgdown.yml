@@ -1,8 +1,14 @@
 url: https://buchi-labortechnik-ag.github.io/proximetricsR/
 template:
   bootstrap: 5
+  bootswatch: cosmo
+  bslib:
+    code-bg: "#f8f9fa"
   includes:
     in_header: |
       <style>
       .page-header img.logo { display: none; }
       </style>
+home:
+  title: proximetricsR - Spectral preprocessing and chemometric calibration of near-infrared (NIR) sensors  
+  
