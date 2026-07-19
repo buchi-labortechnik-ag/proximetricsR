@@ -12,12 +12,7 @@ engine: knitr
 [![codecov](https://codecov.io/gh/buchi-labortechnik-ag/proximetricsR/branch/main/graph/badge.svg)](https://app.codecov.io/gh/buchi-labortechnik-ag/proximetricsR)
 [![CRAN status](https://www.r-pkg.org/badges/version/proximetricsR?v=2)](https://CRAN.R-project.org/package=proximetricsR)
 
-
-<div style="display: flex; align-items: center; justify-content: space-between;">
-  <img src="./man/figures/logo.png" alt="proximetricsR logo" width="25%">
-</div>
-
-
+<img align="right" src="./man/figures/logo.png" alt="proximetricsR logo" width="25%">
 
 _Last update: `r Sys.Date()`_
 
