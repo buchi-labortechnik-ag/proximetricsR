@@ -1,4 +1,8 @@
 url: https://buchi-labortechnik-ag.github.io/proximetricsR/
 template:
-  bootstrap: 5 
-  
+  bootstrap: 5
+  includes:
+    in_header: |
+      <style>
+      .page-header img.logo { display: none; }
+      </style>
