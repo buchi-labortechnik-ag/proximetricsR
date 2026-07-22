@@ -67,10 +67,10 @@ has_group <- !all(is.na(group_factor))
 
 if (has_group) {
   # Assign "Other" to unassigned samples
-  levels(group_factor) <- c(levels(group_factor), "Other")
-  group_factor[is.na(group_factor)] <- "Other"
+  other_label <- if ("Other" %in% levels(group_factor)) "Other (ungrouped)" else "Other"
+  levels(group_factor) <- c(levels(group_factor), other_label)
+  group_factor[is.na(group_factor)] <- other_label
   group_factor <- droplevels(group_factor)
-  
   group_colors <- setNames(
     scales::hue_pal()(length(levels(group_factor))),
     levels(group_factor)

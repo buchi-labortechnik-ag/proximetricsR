@@ -56,7 +56,7 @@ Available names: \code{"predicted_vs_reference"}. Defaults to \code{"all"}
 when \code{validations} is supplied, \code{NULL} otherwise.}
 
 \item{sample_group}{a named list of samples that should have the same color.
-See details. Default is `NULL`, meaning no grouping is done. Note that this
+See details. Default is \code{NULL}, meaning no grouping is done. Note that this
 is only to distinguish samples for the plots; the model itself remains unchanged.}
 
 \item{verbose}{a logical. When \code{TRUE} (default), prints the path of the
@@ -196,7 +196,7 @@ control was applied) or at the maximum number of components (otherwise).
 
 \strong{Sample groups}
 
-The parameter `sample_group` defines samples that belong to the same group and
+The parameter \code{sample_group} defines samples that belong to the same group and
 should be displayed with the same color. The legend displays each group by
 the name given in the list (and an "Other" group for samples not listed).
 

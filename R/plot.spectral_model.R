@@ -51,7 +51,7 @@
 #' Available names: \code{"predicted_vs_reference"}. Defaults to \code{"all"}
 #' when \code{validations} is supplied, \code{NULL} otherwise.
 #' @param sample_group a named list of samples that should have the same color.
-#' See details. Default is `NULL`, meaning no grouping is done. Note that this
+#' See details. Default is \code{NULL}, meaning no grouping is done. Note that this
 #' is only to distinguish samples for the plots; the model itself remains unchanged.
 #' @param verbose a logical. When \code{TRUE} (default), prints the path of the
 #' generated file. Pandoc output is always suppressed.
@@ -179,7 +179,7 @@
 #' 
 #' \strong{Sample groups}
 #' 
-#' The parameter `sample_group` defines samples that belong to the same group and
+#' The parameter \code{sample_group} defines samples that belong to the same group and
 #' should be displayed with the same color. The legend displays each group by
 #' the name given in the list (and an "Other" group for samples not listed).
 #' 
@@ -293,14 +293,22 @@ plot.spectral_model <- function(
   }
   # Sample group validation
   if (!is.null(sample_group)) {
-    if (!all(vapply(sample_group, is.numeric, logical(1)))) {
-      stop("'sample_group' must contain only numeric sample indices.")
-    }
     if (!is.list(sample_group) || is.null(names(sample_group))) {
-      warning("'sample_group' should be a named list")
+      warning("'sample_group' should be a named list.")
       sample_group <- NULL
-    }
-    if (anyDuplicated(unlist(sample_group))) {
+    } else if (anyNA(names(sample_group)) || any(names(sample_group) == "")) {
+      warning("ignoring 'sample_group' because group names must be non-empty and not NA.")
+      sample_group <- NULL
+    } else if (anyDuplicated(names(sample_group))) {
+      warning("ignoring 'sample_group' due to duplicated group names.")
+      sample_group <- NULL
+    } else if (!all(vapply(sample_group, is.numeric, logical(1)))) {
+      warning("ignoring 'sample_group', as it contains non-numeric sample indices.")
+      sample_group <- NULL
+    } else if (anyNA(unlist(sample_group))) {
+      warning("ignoring 'sample_group' due to NA sample indices.")
+      sample_group <- NULL
+    } else if (anyDuplicated(unlist(sample_group))) {
       warning("ignoring 'sample_group' due to duplicated sample indices.")
       sample_group <- NULL
     }
