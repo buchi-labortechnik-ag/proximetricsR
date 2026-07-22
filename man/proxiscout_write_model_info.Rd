@@ -12,7 +12,7 @@ preprocessing recipe and final model details.}
 
 \item{n_measurements}{An integer for the number of measurements. This value is
 directly written into the JSON as both the \code{numberOfMeasurements} and
-\code{avgReading}, and represents the number of measurements that were taken
+\code{avgReadings}, and represents the number of measurements that were taken
 in the original data per sample. Default is \code{1}.}
 
 \item{file}{an optional character string with the path (including the filename)
