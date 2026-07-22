@@ -4,12 +4,16 @@
 \alias{plot.spectral_model}
 \title{Plot results of a given model}
 \usage{
-\method{plot}{spectral_model}(x, validations = NULL, output_file = x$target_variable,
+\method{plot}{spectral_model}(
+  x,
+  validations = NULL,
+  output_file = x$target_variable,
   output_dir = NULL,
   spectral = c("weights", "coefficients", "scores", "mahalanobis"),
   cv = c("error", "response", "residuals", "qq", "distributions"),
   regression = NULL,
   validation = if (!is.null(validations)) "all" else NULL,
+  sample_group = NULL,
   verbose = TRUE, open_file = TRUE, ...)
 }
 \arguments{
@@ -50,6 +54,10 @@ skip the section entirely. Available names:
 \code{"all"} to include every validation plot, or \code{NULL} to skip.
 Available names: \code{"predicted_vs_reference"}. Defaults to \code{"all"}
 when \code{validations} is supplied, \code{NULL} otherwise.}
+
+\item{sample_group}{a named list of samples that should have the same color.
+See details. Default is `NULL`, meaning no grouping is done. Note that this
+is only to distinguish samples for the plots; the model itself remains unchanged.}
 
 \item{verbose}{a logical. When \code{TRUE} (default), prints the path of the
 generated file. Pandoc output is always suppressed.}
@@ -92,53 +100,53 @@ The available plots per section are as follows (defaults marked with *):
 
 \strong{spectral}
 \itemize{
-\item {\strong{Raw Spectra}:}  A line plot of all raw spectra. Only available if
-input data is saved inside the model \code{x}, i.e. if the method
-\code{calibrate} was called with \code{return_inputs} is set to \code{TRUE}.
-Note that the depicted spectrum always has a resolution of 10.
-\item {\strong{Preprocessed spectra}:}  A line plot of all preprocessed
-spectra. Note that the depicted spectrum always has a resolution of 10.
-\item {\strong{Weights*}:}  A line plot of all weights.
-\item {\strong{Loadings}:}  A line plot of all loadings.
-\item {\strong{Coefficients*}:}  A line plot of all regression coefficients.
-\item {\strong{Scores*}:}  A points plot of scores for each component.
-\item {\strong{3D Scores}:}  A three dimensional points plot of scores for each
-component. The component for the x-axis can be selected with a slider.
-The corresponding y- and z-axis are the previous and next component,
-respectively.
-\item {\strong{Scaled Scores}:}  A points plot of the scaled scores for each
-component.
-\item {\strong{Mahalanobis Distance*}:}  A points plot of the Mahalanobis distance
-of the scaled scores of each component.
-}
+    \item {\strong{Raw Spectra}:}  A line plot of all raw spectra. Only available if
+    input data is saved inside the model \code{x}, i.e. if the method
+    \code{calibrate} was called with \code{return_inputs} is set to \code{TRUE}.
+    Note that the depicted spectrum always has a resolution of 10.
+    \item {\strong{Preprocessed spectra}:}  A line plot of all preprocessed
+    spectra. Note that the depicted spectrum always has a resolution of 10.
+    \item {\strong{Weights*}:}  A line plot of all weights.
+    \item {\strong{Loadings}:}  A line plot of all loadings.
+    \item {\strong{Coefficients*}:}  A line plot of all regression coefficients.
+    \item {\strong{Scores*}:}  A points plot of scores for each component.
+    \item {\strong{3D Scores}:}  A three dimensional points plot of scores for each
+    component. The component for the x-axis can be selected with a slider.
+    The corresponding y- and z-axis are the previous and next component,
+    respectively.
+    \item {\strong{Scaled Scores}:}  A points plot of the scaled scores for each
+    component.
+    \item {\strong{Mahalanobis Distance*}:}  A points plot of the Mahalanobis distance
+    of the scaled scores of each component.
+    }
 
 \strong{cv}
 
 Only available if the calibration used cross-validation. For
 leave-group-out cross-validation, only \code{"error"} is available.
 \itemize{
-\item {\strong{Error measures*}:} A plot of error and precision measures. In
-particular, this plot depicts the largest residual, the RMSE and the R-
-squared measures for the cross-validation for all components.
-The optimal component is highlighted.
-\item {\strong{CV Response Plot*}:} A points plot of the reference values versus
-the cross-validation predictions made by the model for each component.
-Additionally, the identity line is added, plus a regression line fitted
-with the use of the a linear regression model.
-\item {\strong{CV Response Plot Overview}:}  An overview of all CV Response Plot
-in a single plot.
-\item {\strong{CV Residuals*}:} A points plot of the residuals of the
-cross-validated predictions, for every component.
-\item {\strong{Q-Q Plot of CV Residuals*}:}  A Q-Q plot of the sample quantiles of
-the standardized cross-validated residuals against the theoretical
-quantiles of a normal distribution for each component. A line with
-intercept zero and slope one is depicted.
-\item {\strong{CV Q-Values}:} A points plot of the Q-values of the cross-
-validation in the model for each component. See details of
-\link{calibrate} for an explanation of the Q-values.
-\item {\strong{Distributions*}:}  A line plot of the densities of the reference
-values and the cross-validated predictions for each component.
-}
+    \item {\strong{Error measures*}:} A plot of error and precision measures. In
+    particular, this plot depicts the largest residual, the RMSE and the R-
+    squared measures for the cross-validation for all components.
+    The optimal component is highlighted.
+    \item {\strong{CV Response Plot*}:} A points plot of the reference values versus
+    the cross-validation predictions made by the model for each component.
+    Additionally, the identity line is added, plus a regression line fitted
+    with the use of the a linear regression model.
+    \item {\strong{CV Response Plot Overview}:}  An overview of all CV Response Plot
+    in a single plot.
+    \item {\strong{CV Residuals*}:} A points plot of the residuals of the
+    cross-validated predictions, for every component.
+    \item {\strong{Q-Q Plot of CV Residuals*}:}  A Q-Q plot of the sample quantiles of
+    the standardized cross-validated residuals against the theoretical
+    quantiles of a normal distribution for each component. A line with
+    intercept zero and slope one is depicted.
+    \item {\strong{CV Q-Values}:} A points plot of the Q-values of the cross-
+    validation in the model for each component. See details of
+    \link{calibrate} for an explanation of the Q-values.
+    \item {\strong{Distributions*}:}  A line plot of the densities of the reference
+    values and the cross-validated predictions for each component.
+    }
 
 \strong{regression}
 
@@ -146,45 +154,58 @@ These plots do not necessarily indicate model performance - more components
 generally improve fit but may overfit. Useful for identifying outliers.
 Similar to \code{\link[stats]{plot.lm}}.
 \itemize{
-\item {\strong{Response Plot}:} A points plot of the reference values versus the
-fitted values for each component. Additionally, the identity line is
-added and a regression line is fitted using a linear regression model.
-\item {\strong{Response Plots Overview}:} An overview of all Response plots in
-a single plot.
-\item {\strong{Residuals}:} A points plot of the residuals of the fitted values
-for each component.
-\item {\strong{Q-Q Plot of Residuals}:} A Q-Q plot of the sample quantiles of
-the standardized residuals against the theoretical quantiles of a normal
-distribution for each component. A line with intercept zero and slope one
-is depicted.
-\item {\strong{Residuals vs Fitted}:} A points plot of the fitted values against
-their residuals for each component. Additionally, a line for the LOESS
-smoother is depicted.
-\item {\strong{Scale Location Plot}:} A points plot of the fitted values against
-the square roots of the absolute values of the standardized residuals for
-each component. Additionally, a line for the LOESS smother is depicted.
-\item {\strong{Leverage vs Residuals}:} A points plot of the leverages of the
-fitted values against the standardized residuals for each component.
-Additionally, a line for the LOESS smother is depicted.
-}
+    \item {\strong{Response Plot}:} A points plot of the reference values versus the
+    fitted values for each component. Additionally, the identity line is
+    added and a regression line is fitted using a linear regression model.
+    \item {\strong{Response Plots Overview}:} An overview of all Response plots in
+    a single plot.
+    \item {\strong{Residuals}:} A points plot of the residuals of the fitted values
+    for each component.
+    \item {\strong{Q-Q Plot of Residuals}:} A Q-Q plot of the sample quantiles of
+    the standardized residuals against the theoretical quantiles of a normal
+    distribution for each component. A line with intercept zero and slope one
+    is depicted.
+    \item {\strong{Residuals vs Fitted}:} A points plot of the fitted values against
+    their residuals for each component. Additionally, a line for the LOESS
+    smoother is depicted.
+    \item {\strong{Scale Location Plot}:} A points plot of the fitted values against
+    the square roots of the absolute values of the standardized residuals for
+    each component. Additionally, a line for the LOESS smother is depicted.
+    \item {\strong{Leverage vs Residuals}:} A points plot of the leverages of the
+    fitted values against the standardized residuals for each component.
+    Additionally, a line for the LOESS smother is depicted.
+    }
 
 \strong{validation}
 
 Only available when \code{validations} is supplied (an object of class
 \code{spectral_validation} from \code{\link{validate_prediction}}).
 \itemize{
-\item {\strong{Predicted vs. Reference*}:} Shows the predictions of the
-new data obtained from the model versus the actual reference values,
-with an identity line, plus a regression line fitted with the use of a
-linear regression model. Additionally, the \mjeqn{R^2}{R^2} and \code{RMSE}
-of both the validated predictions and model is depicted. See
-\code{\link{validate_prediction}} and \code{\link[=predict.spectral_model]{predict}} for more details on the
-prediction and validation process.
-}
+    \item {\strong{Predicted vs. Reference*}:} Shows the predictions of the
+    new data obtained from the model versus the actual reference values,
+    with an identity line, plus a regression line fitted with the use of a
+    linear regression model. Additionally, the \mjeqn{R^2}{R^2} and \code{RMSE}
+    of both the validated predictions and model is depicted. See
+    \code{\link{validate_prediction}} and \code{\link[=predict.spectral_model]{predict}} for more details on the
+    prediction and validation process.
+    }
 
 Most of above plots contain a slider, which may be used to adjust the considered
 component. The sliders start at the optimal components (if any calibration
 control was applied) or at the maximum number of components (otherwise).
+
+\strong{Sample groups}
+
+The parameter `sample_group` defines samples that belong to the same group and
+should be displayed with the same color. The legend displays each group by
+the name given in the list (and an "Other" group for samples not listed).
+
+The idea of this parameter is to allow the user to distinguish e.g. between
+different instruments. Each sample must belong to a single group, otherwise,
+this argument is ignored. Indices refer to the sample indices in the calibration
+statistics in the model.
+
+\strong{Additional parameters for graphics}
 
 The plots are constructed with the help of the plotly package. As such,
 the possibilities to manipulate the plots are as in that package.
@@ -227,14 +248,19 @@ plot(my_model,
   output_dir = tempdir(),
   spectral = "all", cv = "all", regression = "all", validation = "all"
 )
-# Custom section selection
+# Custom section selection with sample grouping
 plot(
   my_model,
   output_file = "example_plot",
   output_dir = tempdir(),
   spectral = c("weights", "scores"),
   cv = "all",
-  regression = NULL
+  regression = NULL,
+  sample_group = list(
+    "Batch A" = 1:20,
+    "Batch B" = 21:60,
+    "Batch C" = 61:80
+  )
 )
 # Make predictions and validate
 preds <- predict(my_model, NIRcannabis[skips, ])
