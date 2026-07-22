@@ -278,9 +278,7 @@ calibrate_models <- function(formulas,
   list_indx <- rep(seq_along(formulas), each = length(preprocess_recipes))
   method_grid <- NULL
   for (i in 1:niter) {
-    ith_formula <- results_grid$formula[i] |>
-      as.character() |>
-      as.formula()
+    ith_formula <- formulas[[list_indx[i]]]
     ith_recipe <- preprocess_recipes[[results_grid$recipe[i]]]
     if (verbose) {
       if (!identical(results_grid$formula[i], results_grid$formula[i - 1])) {
@@ -386,9 +384,7 @@ calibrate_models <- function(formulas,
     final_models <- NULL
     for (i in final_models_idx) {
       this_iter <- this_iter + 1
-      ith_formula <- results_grid$formula[i] |>
-        as.character() |>
-        as.formula()
+      ith_formula <- formulas[[list_indx[i]]]
       if (verbose) {
         cat(paste0("\033[31m--- Fitting final model for ", results_grid$formula[i], " ----\033[39m\n"))
       }
