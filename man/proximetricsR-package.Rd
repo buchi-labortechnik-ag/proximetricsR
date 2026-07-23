@@ -10,7 +10,7 @@ NIR calibration and application tools for BUCHI ProxiMate and ProxiScout devices
 \if{html}{\figure{logo.png}{options: style = 'float: right;' alt = 'logo' width = '120'}}
 }
 \details{
-This is package version 0.6.5 (Matterhorn2).
+This is package version 0.7.0 (Matterhorn2).
 
 This package provides \code{R} functions for spectral pre-processing, NIR
 model calibration, and reading/writing files for BUCHI ProxiMate and

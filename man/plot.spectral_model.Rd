@@ -4,12 +4,16 @@
 \alias{plot.spectral_model}
 \title{Plot results of a given model}
 \usage{
-\method{plot}{spectral_model}(x, validations = NULL, output_file = x$target_variable,
+\method{plot}{spectral_model}(
+  x,
+  validations = NULL,
+  output_file = x$target_variable,
   output_dir = NULL,
   spectral = c("weights", "coefficients", "scores", "mahalanobis"),
   cv = c("error", "response", "residuals", "qq", "distributions"),
   regression = NULL,
   validation = if (!is.null(validations)) "all" else NULL,
+  sample_group = NULL,
   verbose = TRUE, open_file = TRUE, ...)
 }
 \arguments{
@@ -50,6 +54,10 @@ skip the section entirely. Available names:
 \code{"all"} to include every validation plot, or \code{NULL} to skip.
 Available names: \code{"predicted_vs_reference"}. Defaults to \code{"all"}
 when \code{validations} is supplied, \code{NULL} otherwise.}
+
+\item{sample_group}{a named list of samples that should have the same color.
+See details. Default is \code{NULL}, meaning no grouping is done. Note that this
+is only to distinguish samples for the plots; the model itself remains unchanged.}
 
 \item{verbose}{a logical. When \code{TRUE} (default), prints the path of the
 generated file. Pandoc output is always suppressed.}
@@ -186,6 +194,19 @@ Most of above plots contain a slider, which may be used to adjust the considered
 component. The sliders start at the optimal components (if any calibration
 control was applied) or at the maximum number of components (otherwise).
 
+\strong{Sample groups}
+
+The parameter \code{sample_group} defines samples that belong to the same group and
+should be displayed with the same color. The legend displays each group by
+the name given in the list (and an "Other" group for samples not listed).
+
+The idea of this parameter is to allow the user to distinguish e.g. between
+different instruments. Each sample must belong to a single group, otherwise,
+this argument is ignored. Indices refer to the sample indices in the calibration
+statistics in the model.
+
+\strong{Additional parameters for graphics}
+
 The plots are constructed with the help of the plotly package. As such,
 the possibilities to manipulate the plots are as in that package.
 The arrangement of the plots is controlled by the quarto package.
@@ -227,14 +248,19 @@ plot(my_model,
   output_dir = tempdir(),
   spectral = "all", cv = "all", regression = "all", validation = "all"
 )
-# Custom section selection
+# Custom section selection with sample grouping
 plot(
   my_model,
   output_file = "example_plot",
   output_dir = tempdir(),
   spectral = c("weights", "scores"),
   cv = "all",
-  regression = NULL
+  regression = NULL,
+  sample_group = list(
+    "Batch A" = 1:20,
+    "Batch B" = 21:60,
+    "Batch C" = 61:80
+  )
 )
 # Make predictions and validate
 preds <- predict(my_model, NIRcannabis[skips, ])

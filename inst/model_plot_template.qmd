@@ -11,6 +11,7 @@ params:
   model_path: NULL
   validations_path: NULL
   selection: NULL
+  sample_group: NULL
   graph_params: NULL
   subtitle: ""
 ---
@@ -34,13 +35,14 @@ full_model <- readRDS(params$model_path)
 selection <- params$selection
 
 n_comps <- full_model$method$ncomp
-components <- 1:n_comps
+components <- seq_len(n_comps)
 opt_comp <- full_model$final_ncomp
 final_model <- full_model$final_model
 
 wavelengths <- as.double(colnames(final_model$model$weights))
 n_observations <- final_model$model$n_observations
-xaxis_label <- switch(full_model$preprocess$device,
+xaxis_label <- switch(
+  full_model$preprocess$device,
   proxiscout  = "Wavenumber (cm<sup>-1</sup>)",
   proximate   = "Wavelength (nm)",
   ""
@@ -52,7 +54,31 @@ if (full_model$preprocess$device == "proxiscout") {
 cal_stats <- final_model$calibration_statistics_all
 observation_names <- paste("Observation", cal_stats$Sample_index)
 Y <- cal_stats$Target
-colrs <- rainbow(n_comps)
+colrs <- scales::hue_pal()(n_comps)
+
+# Map group indices to positions in cal_stats$Sample_index
+sample_group <- params$sample_group
+group_factor <- rep(NA_character_, n_observations)
+for (g in names(sample_group)) {
+  idx <- which(cal_stats$Sample_index %in% sample_group[[g]])
+  group_factor[idx] <- g
+}
+group_factor <- factor(group_factor, levels = names(sample_group))
+has_group <- !all(is.na(group_factor))
+
+if (has_group) {
+  # Assign "Other" to unassigned samples
+  other_label <- if ("Other" %in% levels(group_factor)) "Other (ungrouped)" else "Other"
+  levels(group_factor) <- c(levels(group_factor), other_label)
+  group_factor[is.na(group_factor)] <- other_label
+  group_factor <- droplevels(group_factor)
+  group_colors <- setNames(
+    scales::hue_pal()(length(levels(group_factor))),
+    levels(group_factor)
+  )
+} else {
+  group_colors <- NULL
+}
 # Obtain the name of the spectrum that was used if the model was built with a
 # formula, otherwise use `spc`
 if (is.null(full_model$formula)) {
@@ -81,6 +107,33 @@ sliders <- list(list(
   steps = steps,
   pad = list(t = 50, r = 50, b = 0, l = 50)
 ))
+
+
+# Group sliders
+if (has_group) {
+  n_groups <- length(levels(group_factor))
+  # Traces: n_comps segments, then n_comps * n_groups markers
+  n_traces <- n_comps + n_comps * n_groups
+  grp_steps <- list()
+  for (i in components) {
+    vis <- rep(FALSE, n_traces)
+    vis[i] <- TRUE
+    marker_start <- n_comps + (i - 1) * n_groups + 1
+    vis[marker_start:(marker_start + n_groups - 1)] <- TRUE
+    grp_steps[[i]] <- list(
+      args = list("visible", vis),
+      method = "restyle",
+      label = paste("Component", i),
+      value = as.character(i)
+    )
+  }
+  group_sliders <- list(list(
+    currentvalue = list(prefix = "", font = list(color = "black", xanchor = "left")),
+    active = opt_comp - 1,
+    steps = grp_steps,
+    pad = list(t = 50, r = 50, b = 0, l = 50)
+  ))
+}
 
 given_params <- params$graph_params
 if (length(given_params) > 0) {
@@ -154,30 +207,59 @@ raw_spectra <- full_model$input_data$data[[spc_name]][cal_stats$Sample_index, ]
 to_plot <- data.frame(
   wavelengths = as.double(colnames(raw_spectra)),
   spec = as.vector(t(raw_spectra)),
-  name = rep(
-    paste("Spectrum", cal_stats$Sample_index),
-    each = ncol(raw_spectra)
-  )
+  name = rep(paste("Spectrum", cal_stats$Sample_index), each = ncol(raw_spectra)),
+  grp = rep(group_factor, each = ncol(raw_spectra))
 )
 
 to_plot$name <- factor(to_plot$name, levels = paste("Spectrum", cal_stats$Sample_index))
 
-fig <- do.call(
-  "plot_ly",
-  c(
-    plotly_params["marker" != names(plotly_params)],
-    list(
-      data = to_plot,
-      type = "scatter",
-      mode = "lines",
-      x = ~wavelengths,
-      y = ~spec,
-      split = ~name,
-      name = ~name,
-      line = list(width = 1, simplify = TRUE)
+if (has_group) {
+  fig <- plot_ly(type = "scatter", mode = "lines")
+  shown_groups <- character(0)
+  for (s in levels(to_plot$name)) {
+    sub <- to_plot[to_plot$name == s, ]
+    g <- as.character(sub$grp[1])
+    show <- !(g %in% shown_groups)
+    fig <- do.call(
+      "add_trace",
+      c(
+        plotly_params["marker" != names(plotly_params)],
+        list(
+          p = fig,
+          x = sub$wavelengths,
+          y = sub$spec,
+          type = "scatter",
+          mode = "lines",
+          name = g,
+          legendgroup = g,
+          showlegend = show,
+          line = list(width = 1, color = group_colors[[g]]),
+          hovertext = s,
+          hoverinfo = "x+y+text"
+        )
+      )
+    )
+    shown_groups <- c(shown_groups, g)
+  }
+} else {
+  to_plot <- to_plot |> group_by(name)
+  fig <- do.call(
+    "plot_ly",
+    c(
+      plotly_params["marker" != names(plotly_params)],
+      list(
+        data = to_plot,
+        type = "scatter",
+        mode = "lines",
+        x = ~wavelengths,
+        y = ~spec,
+        split = ~name,
+        name = ~name,
+        line = list(width = 1, simplify = TRUE)
+      )
     )
   )
-)
+}
 
 fig <- do.call(
   "layout",
@@ -208,30 +290,59 @@ recipe <- full_model$preprocess$preprocessing_order
 to_plot <- data.frame(
   wavelengths = as.double(colnames(prepro_spc)),
   spec = as.vector(t(prepro_spc)),
-  name = rep(
-    paste("Spectrum", cal_stats$Sample_index),
-    each = ncol(prepro_spc)
-  )
+  name = rep(paste("Spectrum", cal_stats$Sample_index), each = ncol(prepro_spc)),
+  grp = rep(group_factor, each = ncol(prepro_spc))
 )
 
 to_plot$name <- factor(to_plot$name, levels = paste("Spectrum", cal_stats$Sample_index))
 
 fig <- plot_ly(type = "scatter", mode = "lines")
-fig <- do.call(
-  "add_lines",
-  c(
-    plotly_params["marker" != names(plotly_params)],
-    list(
-      p = fig,
-      data = to_plot,
-      x = ~wavelengths,
-      y = ~spec,
-      split = ~name,
-      name = ~name,
-      line = list(width = 1, simplify = TRUE)
+
+if (has_group) {
+  shown_groups <- character(0)
+  for (s in levels(to_plot$name)) {
+    sub <- to_plot[to_plot$name == s, ]
+    g <- as.character(sub$grp[1])
+    show <- !(g %in% shown_groups)
+    fig <- do.call(
+      "add_trace",
+      c(
+        plotly_params["marker" != names(plotly_params)],
+        list(
+          p = fig,
+          x = sub$wavelengths,
+          y = sub$spec,
+          type = "scatter",
+          mode = "lines",
+          name = g,
+          legendgroup = g,
+          showlegend = show,
+          line = list(width = 1, color = group_colors[[g]]),
+          hovertext = s,
+          hoverinfo = "x+y+text"
+        )
+      )
+    )
+    shown_groups <- c(shown_groups, g)
+  }
+} else {
+  fig <- do.call(
+    "add_lines",
+    c(
+      plotly_params["marker" != names(plotly_params)],
+      list(
+        p = fig,
+        data = to_plot,
+        x = ~wavelengths,
+        y = ~spec,
+        split = ~name,
+        name = ~name,
+        line = list(width = 1, simplify = TRUE)
+      )
     )
   )
-)
+}
+
 fig <- do.call(
   "add_text",
   list(
@@ -240,7 +351,7 @@ fig <- do.call(
     y = max(to_plot$spec),
     text = recipe,
     textposition = "bottom right",
-    showlegend = F,
+    showlegend = FALSE,
     hoverinfo = "text",
     fillcolor = "red"
   )
@@ -275,12 +386,12 @@ to_plot <- data.frame(
   wavelengths = wavelengths,
   weights = as.vector(t(final_model$model$weights)),
   name = rep(
-    paste("Component", 1:n_comps),
+    paste("Component", components),
     each = ncol(final_model$model$weights)
   )
 )
 
-to_plot$name <- factor(to_plot$name, levels = paste("Component", 1:n_comps))
+to_plot$name <- factor(to_plot$name, levels = paste("Component", components))
 
 fig <- do.call(
   "plot_ly",
@@ -323,12 +434,12 @@ to_plot <- data.frame(
   wavelengths = wavelengths,
   loadings = as.vector(t(final_model$model$x_loadings)),
   name = rep(
-    paste("Component", 1:n_comps),
+    paste("Component", components),
     each = ncol(final_model$model$x_loadings)
   )
 )
 
-to_plot$name <- factor(to_plot$name, levels = paste("Component", 1:n_comps))
+to_plot$name <- factor(to_plot$name, levels = paste("Component", components))
 
 fig <- do.call(
   "plot_ly",
@@ -371,12 +482,12 @@ to_plot <- data.frame(
   wavelengths = wavelengths,
   coeff = as.vector(t(final_model$model$coefficients)),
   name = rep(
-    paste("Component", 1:n_comps),
+    paste("Component", components),
     each = ncol(final_model$model$coefficients)
   )
 )
 
-to_plot$name <- factor(to_plot$name, levels = paste("Component", 1:n_comps))
+to_plot$name <- factor(to_plot$name, levels = paste("Component", components))
 
 fig <- do.call(
   "plot_ly",
@@ -419,33 +530,61 @@ fig <- plot_ly()
 for (i in components) {
   fig <- fig |>
     add_segments(
-      x = 1:n_observations,
-      xend = 1:n_observations,
+      x = seq_len(n_observations),
+      xend = seq_len(n_observations),
       y = as.vector(final_model$model$scores[, i]),
       yend = 0,
       line = list(dash = "dash", width = 0.3, color = "black"),
-      showlegend = F,
+      showlegend = FALSE,
       visible = (i == opt_comp)
     )
 }
 for (i in components) {
-  fig <- do.call(
-    "add_markers",
-    c(
-      plotly_params["line" != names(plotly_params)],
-      list(
-        p = fig,
-        x = 1:n_observations,
-        y = as.vector(final_model$model$scores[, i]),
-        visible = (i == opt_comp),
-        hovertext = observation_names,
-        showlegend = F,
-        hoverinfo = "x+y+text",
-        type = "scatter",
-        mode = "markers"
+  if (has_group) {
+    for (gi in seq_along(levels(group_factor))) {
+      g <- levels(group_factor)[gi]
+      idx <- which(group_factor == g)
+      fig <- do.call(
+        "add_markers",
+        c(
+          plotly_params["marker" != names(plotly_params)],
+          list(
+            p = fig,
+            x = idx,
+            y = as.vector(final_model$model$scores[idx, i]),
+            visible = (i == opt_comp),
+            hovertext = observation_names[idx],
+            name = g,
+            legendgroup = g,
+            legendrank = gi,
+            showlegend = TRUE,
+            marker = list(color = group_colors[[g]]),
+            hoverinfo = "x+y+text",
+            type = "scatter",
+            mode = "markers"
+          )
+        )
+      )
+    }
+  } else {
+    fig <- do.call(
+      "add_markers",
+      c(
+        plotly_params["line" != names(plotly_params)],
+        list(
+          p = fig,
+          x = seq_len(n_observations),
+          y = as.vector(final_model$model$scores[, i]),
+          visible = (i == opt_comp),
+          hovertext = observation_names,
+          showlegend = FALSE,
+          hoverinfo = "x+y+text",
+          type = "scatter",
+          mode = "markers"
+        )
       )
     )
-  )
+  }
 }
 fig <- do.call(
   "layout",
@@ -453,15 +592,10 @@ fig <- do.call(
     layout_params,
     list(
       p = fig,
-      xaxis = list(
-        title = "Observation",
-        titlefont = list(color = "#7f7f7f")
-      ),
-      yaxis = list(
-        title = "Score",
-        titlefont = list(color = "#7f7f7f")
-      ),
-      sliders = sliders
+      xaxis = list(title = "Observation", titlefont = list(color = "#7f7f7f")),
+      yaxis = list(title = "Score", titlefont = list(color = "#7f7f7f")),
+      sliders = if (has_group) group_sliders else sliders,
+      legend = list(traceorder = "grouped")
     )
   )
 )
@@ -475,105 +609,142 @@ if (spectral_selection[7]) cat("### 3D Scores\n\n")
 
 ```{r}
 #| eval: !expr spectral_selection[7]
-fig <- plot_ly(type = "scatter3d", mode = "markers")
+fig <- plot_ly()
 scores <- final_model$model$scores
+components_3d <- 2:(n_comps - 1)
 if (n_comps > 3) {
-  components_3d <- 2:(n_comps - 1)
   max_comp <- max(2, min(n_comps - 1, opt_comp, na.rm = TRUE))
-  steps_3d <- list()
-  for (i in components_3d) {
-    step <- list(
-      args = list(
-        list(
-          visible = rep(FALSE, n_comps)
+  max_pos <- which(components_3d == max_comp)
+  if (has_group) {
+    # Build grouped 3D slider steps
+    n_groups <- length(levels(group_factor))
+    n_3d_traces <- length(components_3d) * n_groups
+    steps_3d <- list()
+    for (i in components_3d) {
+      pos <- which(components_3d == i)
+      vis <- rep(FALSE, n_3d_traces)
+      marker_start <- (pos - 1) * n_groups + 1
+      vis[marker_start:(marker_start + n_groups - 1)] <- TRUE
+      steps_3d[[pos]] <- list(
+        args = list(
+          list(visible = vis),
+          list(scene = list(
+            xaxis = list(title = paste("x: Component", i), titlefont = list(color = "#7f7f7f")),
+            yaxis = list(title = paste("y: Component", i - 1), titlefont = list(color = "#7f7f7f")),
+            zaxis = list(title = paste("z: Component", i + 1), titlefont = list(color = "#7f7f7f"))
+          ))
         ),
-        list(scene = list(
-          xaxis = list(
-            title = paste("x: Component", i),
-            titlefont = list(color = "#7f7f7f")
-          ),
-          yaxis = list(
-            title = paste("y: Component", i - 1),
-            titlefont = list(color = "#7f7f7f")
-          ),
-          zaxis = list(
-            title = paste("z: Component", i + 1),
-            titlefont = list(color = "#7f7f7f")
-          )
-        ))
-      ),
-      method = "update",
-      label = paste("Component", i),
-      value = as.character(i)
-    )
-    step$args[[1]]$visible[i] <- TRUE
-    steps_3d[[i]] <- step
+        method = "update",
+        label = paste("Component", i),
+        value = as.character(i)
+      )
+    }
+    for (i in components_3d) {
+      for (gi in seq_along(levels(group_factor))) {
+        g <- levels(group_factor)[gi]
+        idx <- which(group_factor == g)
+        fig <- add_markers(
+          fig,
+          x = as.vector(scores[idx, i]),
+          y = as.vector(scores[idx, i - 1]),
+          z = as.vector(scores[idx, i + 1]),
+          visible = (i == max_comp),
+          hovertext = observation_names[idx],
+          name = g,
+          legendgroup = g,
+          legendrank = gi,
+          showlegend = TRUE,
+          marker = list(color = group_colors[[g]]),
+          hoverinfo = "x+y+z+text"
+        )
+      }
+    }
+  } else {
+    steps_3d <- list()
+    for (i in components_3d) {
+      pos <- which(components_3d == i)
+      vis <- rep(FALSE, length(components_3d))
+      vis[pos] <- TRUE
+      steps_3d[[pos]] <- list(
+        args = list(
+          list(visible = vis),
+          list(scene = list(
+            xaxis = list(title = paste("x: Component", i), titlefont = list(color = "#7f7f7f")),
+            yaxis = list(title = paste("y: Component", i - 1), titlefont = list(color = "#7f7f7f")),
+            zaxis = list(title = paste("z: Component", i + 1), titlefont = list(color = "#7f7f7f"))
+          ))
+        ),
+        method = "update",
+        label = paste("Component", i),
+        value = as.character(i)
+      )
+    }
+    for (i in components_3d) {
+      fig <- add_markers(
+        fig,
+        x = as.vector(scores[, i]),
+        y = as.vector(scores[, i - 1]),
+        z = as.vector(scores[, i + 1]),
+        visible = (i == max_comp),
+        hovertext = observation_names,
+        showlegend = FALSE,
+        marker = list(color = colrs[i]),
+        hoverinfo = "x+y+z+text"
+      )
+    }
   }
-  for (i in components_3d) {
-    fig <- add_markers(fig,
-      x = as.vector(scores[, i]),
-      y = as.vector(scores[, i - 1]),
-      z = as.vector(scores[, i + 1]),
-      visible = (i == opt_comp),
-      hovertext = observation_names,
-      showlegend = F,
-      marker = list(color = colrs[i]),
-      hoverinfo = "x+y+z+text"
-    )
-  }
+  
   sliders_3d <- list(list(
-    currentvalue = list(
-      prefix = "",
-      font = list(color = "black", xanchor = "left")
-    ),
-    active = opt_comp - 1,
+    currentvalue = list(prefix = "", font = list(color = "black", xanchor = "left")),
+    active = max_pos - 1,
     steps = steps_3d,
     pad = list(t = 50, r = 50, b = 0, l = 50)
   ))
   fig <- fig |> layout(
     scene = list(
-      xaxis = list(
-        title = paste("x: Component", max_comp),
-        titlefont = list(color = "#7f7f7f")
-      ),
-      yaxis = list(
-        title = paste("y: Component", max_comp - 1),
-        titlefont = list(color = "#7f7f7f")
-      ),
-      zaxis = list(
-        title = paste("z: Component", max_comp + 1),
-        titlefont = list(color = "#7f7f7f")
-      )
+      xaxis = list(title = paste("x: Component", max_comp), titlefont = list(color = "#7f7f7f")),
+      yaxis = list(title = paste("y: Component", max_comp - 1), titlefont = list(color = "#7f7f7f")),
+      zaxis = list(title = paste("z: Component", max_comp + 1), titlefont = list(color = "#7f7f7f"))
     ),
     sliders = sliders_3d
   )
   plotly_build2(fig)
 } else if (n_comps == 3) {
-  fig <- add_markers(fig,
-    x = as.vector(scores[, 2]),
-    y = as.vector(scores[, 1]),
-    z = as.vector(scores[, 3]),
-    hovertext = observation_names,
-    showlegend = F,
-    marker = list(color = "blue"),
-    hoverinfo = "x+y+z+text"
-  ) |>
-    layout(
-      scene = list(
-        xaxis = list(
-          title = paste("x: Component", 2),
-          titlefont = list(color = "#7f7f7f")
-        ),
-        yaxis = list(
-          title = paste("y: Component", 1),
-          titlefont = list(color = "#7f7f7f")
-        ),
-        zaxis = list(
-          title = paste("z: Component", 3),
-          titlefont = list(color = "#7f7f7f")
-        )
+  if (has_group) {
+    for (g in levels(group_factor)) {
+      idx <- which(group_factor == g)
+      fig <- add_markers(
+        fig,
+        x = as.vector(scores[idx, 2]),
+        y = as.vector(scores[idx, 1]),
+        z = as.vector(scores[idx, 3]),
+        hovertext = observation_names[idx],
+        name = g,
+        legendgroup = g,
+        showlegend = TRUE,
+        marker = list(color = group_colors[[g]]),
+        hoverinfo = "x+y+z+text"
       )
+    }
+  } else {
+    fig <- add_markers(
+      fig,
+      x = as.vector(scores[, 2]),
+      y = as.vector(scores[, 1]),
+      z = as.vector(scores[, 3]),
+      hovertext = observation_names,
+      showlegend = FALSE,
+      marker = list(color = "blue"),
+      hoverinfo = "x+y+z+text"
     )
+  }
+  fig <- fig |> layout(
+    scene = list(
+      xaxis = list(title = paste("x: Component", 2), titlefont = list(color = "#7f7f7f")),
+      yaxis = list(title = paste("y: Component", 1), titlefont = list(color = "#7f7f7f")),
+      zaxis = list(title = paste("z: Component", 3), titlefont = list(color = "#7f7f7f"))
+    )
+  )
   plotly_build2(fig)
 } else {
   print("Too few components for 3-dimensional plot")
@@ -592,33 +763,61 @@ scaled_scores <- final_model$model$scaled_scores
 for (i in components) {
   fig <- fig |>
     add_segments(
-      x = 1:n_observations,
-      xend = 1:n_observations,
+      x = seq_len(n_observations),
+      xend = seq_len(n_observations),
       y = as.vector(scaled_scores[, i]),
       yend = 0,
       line = list(dash = "dash", width = 0.5, color = "black"),
-      showlegend = F,
+      showlegend = FALSE,
       visible = (i == opt_comp)
     )
 }
 for (i in components) {
-  fig <- do.call(
-    "add_markers",
-    c(
-      plotly_params["line" != names(plotly_params)],
-      list(
-        p = fig,
-        x = 1:n_observations,
-        y = as.vector(scaled_scores[, i]),
-        visible = (i == opt_comp),
-        hovertext = observation_names,
-        showlegend = F,
-        hoverinfo = "x+y+text",
-        type = "scatter",
-        mode = "markers"
+  if (has_group) {
+    for (gi in seq_along(levels(group_factor))) {
+      g <- levels(group_factor)[gi]
+      idx <- which(group_factor == g)
+      fig <- do.call(
+        "add_markers",
+        c(
+          plotly_params["line" != names(plotly_params)],
+          list(
+            p = fig,
+            x = idx,
+            y = as.vector(scaled_scores[idx, i]),
+            visible = (i == opt_comp),
+            hovertext = observation_names[idx],
+            name = g,
+            legendgroup = g,
+            legendrank = gi,
+            showlegend = TRUE,
+            marker = list(color = group_colors[[g]]),
+            hoverinfo = "x+y+text",
+            type = "scatter",
+            mode = "markers"
+          )
+        )
+      )
+    }
+  } else {
+    fig <- do.call(
+      "add_markers",
+      c(
+        plotly_params["line" != names(plotly_params)],
+        list(
+          p = fig,
+          x = seq_len(n_observations),
+          y = as.vector(scaled_scores[, i]),
+          visible = (i == opt_comp),
+          hovertext = observation_names,
+          showlegend = FALSE,
+          hoverinfo = "x+y+text",
+          type = "scatter",
+          mode = "markers"
+        )
       )
     )
-  )
+  }
 }
 fig <- do.call(
   "layout",
@@ -626,16 +825,13 @@ fig <- do.call(
     layout_params,
     list(
       p = fig,
-      xaxis = list(
-        title = "Observation",
-        titlefont = list(color = "#7f7f7f")
-      ),
+      xaxis = list(title = "Observation", titlefont = list(color = "#7f7f7f")),
       yaxis = list(
         title = "Scaled Score",
         titlefont = list(color = "#7f7f7f"),
         range = c(floor(min(scaled_scores)), ceiling(max(scaled_scores)))
       ),
-      sliders = sliders
+      sliders = if (has_group) group_sliders else sliders
     )
   )
 )
@@ -654,33 +850,61 @@ mahal <- final_model$calibration_statistics_all$Mahalanobis
 for (i in components) {
   fig <- fig |>
     add_segments(
-      x = 1:n_observations,
-      xend = 1:n_observations,
+      x = seq_len(n_observations),
+      xend = seq_len(n_observations),
       y = as.vector(mahal[, i]),
       yend = 0,
       line = list(dash = "dash", width = 0.5, color = "black"),
-      showlegend = F,
+      showlegend = FALSE,
       visible = (i == opt_comp)
     )
 }
 for (i in components) {
-  fig <- do.call(
-    "add_markers",
-    c(
-      plotly_params["line" != names(plotly_params)],
-      list(
-        p = fig,
-        x = 1:n_observations,
-        y = as.vector(mahal[, i]),
-        visible = (i == opt_comp),
-        hovertext = observation_names,
-        showlegend = F,
-        hoverinfo = "x+y+text",
-        type = "scatter",
-        mode = "markers"
+  if (has_group) {
+    for (gi in seq_along(levels(group_factor))) {
+      g <- levels(group_factor)[gi]
+      idx <- which(group_factor == g)
+      fig <- do.call(
+        "add_markers",
+        c(
+          plotly_params["line" != names(plotly_params)],
+          list(
+            p = fig,
+            x = idx,
+            y = as.vector(mahal[idx, i]),
+            visible = (i == opt_comp),
+            hovertext = observation_names[idx],
+            name = g,
+            legendgroup = g,
+            legendrank = gi,
+            showlegend = TRUE,
+            marker = list(color = group_colors[[g]]),
+            hoverinfo = "x+y+text",
+            type = "scatter",
+            mode = "markers"
+          )
+        )
+      )
+    }
+  } else {
+    fig <- do.call(
+      "add_markers",
+      c(
+        plotly_params["line" != names(plotly_params)],
+        list(
+          p = fig,
+          x = seq_len(n_observations),
+          y = as.vector(mahal[, i]),
+          visible = (i == opt_comp),
+          hovertext = observation_names,
+          showlegend = FALSE,
+          hoverinfo = "x+y+text",
+          type = "scatter",
+          mode = "markers"
+        )
       )
     )
-  )
+  }
 }
 fig <- do.call(
   "layout",
@@ -688,16 +912,13 @@ fig <- do.call(
     layout_params,
     list(
       p = fig,
-      xaxis = list(
-        title = "Observation",
-        titlefont = list(color = "#7f7f7f")
-      ),
+      xaxis = list(title = "Observation", titlefont = list(color = "#7f7f7f")),
       yaxis = list(
         title = "Mahalanobis Distance",
         titlefont = list(color = "#7f7f7f"),
         range = c(floor(min(mahal)), ceiling(max(mahal)))
       ),
-      sliders = sliders
+      sliders = if (has_group) group_sliders else sliders
     )
   )
 )
@@ -793,7 +1014,7 @@ for (i in components) {
         width = 1,
         color = "black"
       ),
-      showlegend = F,
+      showlegend = FALSE,
       hoverinfo = "text",
       type = "scatter",
       mode = "lines",
@@ -806,8 +1027,8 @@ for (i in components) {
     x = line_x_y,
     y = lin_model$coefficients[1] + line_x_y * lin_model$coefficients[2],
     visible = (i == opt_comp),
-    line = list(width = 1, color = colrs[i]),
-    showlegend = F,
+    line = list(width = 1, color = if (has_group) "#555555" else colrs[i]),
+    showlegend = FALSE,
     hoverinfo = "text",
     type = "scatter",
     mode = "lines",
@@ -821,35 +1042,81 @@ for (i in components) {
     y = line_x_y[n_observations],
     textposition = "bottom right",
     visible = (i == opt_comp),
-    showlegend = F,
+    showlegend = FALSE,
     hoverinfo = "text",
     fillcolor = "red"
   )
 }
 for (i in components) {
-  fig <- fig |> add_markers(
-    x = as.vector(Y),
-    y = cv_predictions[, i],
-    visible = (i == opt_comp),
-    hovertext = observation_names,
-    showlegend = F,
-    marker = list(color = colrs[i]),
-    hoverinfo = "x+y+text",
-    type = "scatter",
-    mode = "markers"
-  )
+  if (has_group) {
+    for (gi in seq_along(levels(group_factor))) {
+      g <- levels(group_factor)[gi]
+      idx <- which(group_factor == g)
+      fig <- fig |> add_markers(
+        x = as.vector(Y[idx]),
+        y = cv_predictions[idx, i],
+        visible = (i == opt_comp),
+        hovertext = observation_names[idx],
+        name = g,
+        legendgroup = g,
+        legendrank = gi,
+        showlegend = TRUE,
+        marker = list(color = group_colors[[g]]),
+        hoverinfo = "x+y+text",
+        type = "scatter",
+        mode = "markers"
+      )
+    }
+  } else {
+    fig <- fig |> add_markers(
+      x = as.vector(Y),
+      y = cv_predictions[, i],
+      visible = (i == opt_comp),
+      hovertext = observation_names,
+      showlegend = FALSE,
+      marker = list(color = colrs[i]),
+      hoverinfo = "x+y+text",
+      type = "scatter",
+      mode = "markers"
+    )
+  }
 }
+
+# Build slider
+if (has_group) {
+  # Traces: n_comps lines + n_comps regression + n_comps text + n_comps*n_groups markers
+  n_groups <- length(levels(group_factor))
+  n_cv_traces <- 3 * n_comps + n_comps * n_groups
+  cv_steps <- list()
+  for (i in components) {
+    vis <- rep(FALSE, n_cv_traces)
+    vis[i] <- TRUE                        # identity line
+    vis[n_comps + i] <- TRUE              # regression line
+    vis[2 * n_comps + i] <- TRUE          # text
+    marker_start <- 3 * n_comps + (i - 1) * n_groups + 1
+    vis[marker_start:(marker_start + n_groups - 1)] <- TRUE
+    cv_steps[[i]] <- list(
+      args = list("visible", vis),
+      method = "restyle",
+      label = paste("Component", i),
+      value = as.character(i)
+    )
+  }
+  cv_sliders <- list(list(
+    currentvalue = list(prefix = "", font = list(color = "black", xanchor = "left")),
+    active = opt_comp - 1,
+    steps = cv_steps,
+    pad = list(t = 50, r = 50, b = 0, l = 50)
+  ))
+} else {
+  cv_sliders <- sliders
+}
+
 fig <- fig |>
   layout(
-    xaxis = list(
-      title = "Reference Value",
-      titlefont = list(color = "#7f7f7f")
-    ),
-    yaxis = list(
-      title = "CV Predicted Reference",
-      titlefont = list(color = "#7f7f7f")
-    ),
-    sliders = sliders
+    xaxis = list(title = "Reference Value", titlefont = list(color = "#7f7f7f")),
+    yaxis = list(title = "CV Predicted Reference", titlefont = list(color = "#7f7f7f")),
+    sliders = cv_sliders
   )
 plotly_build2(fig)
 ```
@@ -882,13 +1149,17 @@ for (i in components) {
       x = ~ti,
       y = ~ti,
       line = list(dash = "dash", width = 1, color = "black"),
-      name = "", showlegend = F, hoverinfo = "none"
+      name = "",
+      showlegend = FALSE,
+      hoverinfo = "none"
     ) |>
     add_lines(
       x = ~ti,
       y = ~lin_line,
       line = list(width = 1, color = colrs[i]),
-      name = "", showlegend = F, hoverinfo = "none"
+      name = "",
+      showlegend = FALSE,
+      hoverinfo = "none"
     ) |>
     add_markers(
       x = ~true,
@@ -916,33 +1187,61 @@ rownames(cv_residuals) <- observation_names
 for (i in components) {
   fig <- fig |>
     add_segments(
-      x = 1:n_observations,
-      xend = 1:n_observations,
+      x = seq_len(n_observations),
+      xend = seq_len(n_observations),
       y = as.vector(cv_residuals[, i]),
       yend = 0,
       line = list(dash = "dash", width = 0.5, color = "black"),
-      showlegend = F,
+      showlegend = FALSE,
       visible = (i == opt_comp)
     )
 }
 for (i in components) {
-  fig <- do.call(
-    "add_markers",
-    c(
-      plotly_params["line" != names(plotly_params)],
-      list(
-        p = fig,
-        x = 1:n_observations,
-        y = as.vector(cv_residuals[, i]),
-        visible = (i == opt_comp),
-        hovertext = observation_names,
-        showlegend = F,
-        hoverinfo = "x+y+text",
-        type = "scatter",
-        mode = "markers"
+  if (has_group) {
+    for (gi in seq_along(levels(group_factor))) {
+      g <- levels(group_factor)[gi]
+      idx <- which(group_factor == g)
+      fig <- do.call(
+        "add_markers",
+        c(
+          plotly_params["line" != names(plotly_params)],
+          list(
+            p = fig,
+            x = idx,
+            y = as.vector(cv_residuals[idx, i]),
+            visible = (i == opt_comp),
+            hovertext = observation_names[idx],
+            name = g,
+            legendgroup = g,
+            legendrank = gi,
+            showlegend = TRUE,
+            marker = list(color = group_colors[[g]]),
+            hoverinfo = "x+y+text",
+            type = "scatter",
+            mode = "markers"
+          )
+        )
+      )
+    }
+  } else {
+    fig <- do.call(
+      "add_markers",
+      c(
+        plotly_params["line" != names(plotly_params)],
+        list(
+          p = fig,
+          x = seq_len(n_observations),
+          y = as.vector(cv_residuals[, i]),
+          visible = (i == opt_comp),
+          hovertext = observation_names,
+          showlegend = FALSE,
+          hoverinfo = "x+y+text",
+          type = "scatter",
+          mode = "markers"
+        )
       )
     )
-  )
+  }
 }
 fig <- do.call(
   "layout",
@@ -950,15 +1249,9 @@ fig <- do.call(
     layout_params,
     list(
       p = fig,
-      xaxis = list(
-        title = "Observation",
-        titlefont = list(color = "#7f7f7f")
-      ),
-      yaxis = list(
-        title = "Residual",
-        titlefont = list(color = "#7f7f7f")
-      ),
-      sliders = sliders
+      xaxis = list(title = "Observation", titlefont = list(color = "#7f7f7f")),
+      yaxis = list(title = "Residual", titlefont = list(color = "#7f7f7f")),
+      sliders = if (has_group) group_sliders else sliders
     )
   )
 )
@@ -990,7 +1283,7 @@ for (i in components) {
         width = 1,
         color = "black"
       ),
-      showlegend = F,
+      showlegend = FALSE,
       hoverinfo = "none",
       type = "scatter",
       mode = "lines"
@@ -1008,7 +1301,7 @@ for (i in components) {
         y = sort(std_cv_residual[, i]),
         visible = (i == opt_comp),
         hovertext = names(sort(std_cv_residual[, i])),
-        showlegend = F,
+        showlegend = FALSE,
         hoverinfo = "x+y+text",
         type = "scatter",
         mode = "markers"
@@ -1022,10 +1315,7 @@ fig <- do.call(
     layout_params,
     list(
       p = fig,
-      xaxis = list(
-        title = "Theoretical Normal Quantile",
-        titlefont = list(color = "#7f7f7f")
-      ),
+      xaxis = list(title = "Theoretical Normal Quantile", titlefont = list(color = "#7f7f7f")),
       yaxis = list(
         title = "Sample Quantile",
         titlefont = list(color = "#7f7f7f"),
@@ -1053,33 +1343,61 @@ q_val <- final_model$calibration_statistics_all$Q_value
 for (i in components) {
   fig <- fig |>
     add_segments(
-      x = 1:n_observations,
-      xend = 1:n_observations,
+      x = seq_len(n_observations),
+      xend = seq_len(n_observations),
       y = as.vector(q_val[, i]),
       yend = 0,
       line = list(dash = "dash", width = 0.5, color = "black"),
-      showlegend = F,
+      showlegend = FALSE,
       visible = (i == opt_comp)
     )
 }
 for (i in components) {
-  fig <- do.call(
-    "add_markers",
-    c(
-      plotly_params["line" != names(plotly_params)],
-      list(
-        p = fig,
-        x = 1:n_observations,
-        y = as.vector(q_val[, i]),
-        visible = (i == opt_comp),
-        hovertext = observation_names,
-        showlegend = F,
-        hoverinfo = "x+y+text",
-        type = "scatter",
-        mode = "markers"
+  if (has_group) {
+    for (gi in seq_along(levels(group_factor))) {
+      g <- levels(group_factor)[gi]
+      idx <- which(group_factor == g)
+      fig <- do.call(
+        "add_markers",
+        c(
+          plotly_params["line" != names(plotly_params)],
+          list(
+            p = fig,
+            x = idx,
+            y = as.vector(q_val[idx, i]),
+            visible = (i == opt_comp),
+            hovertext = observation_names[idx],
+            name = g,
+            legendgroup = g,
+            legendrank = gi,
+            showlegend = TRUE,
+            marker = list(color = group_colors[[g]]),
+            hoverinfo = "x+y+text",
+            type = "scatter",
+            mode = "markers"
+          )
+        )
+      )
+    }
+  } else {
+    fig <- do.call(
+      "add_markers",
+      c(
+        plotly_params["line" != names(plotly_params)],
+        list(
+          p = fig,
+          x = seq_len(n_observations),
+          y = as.vector(q_val[, i]),
+          visible = (i == opt_comp),
+          hovertext = observation_names,
+          showlegend = FALSE,
+          hoverinfo = "x+y+text",
+          type = "scatter",
+          mode = "markers"
+        )
       )
     )
-  )
+  }
 }
 fig <- do.call(
   "layout",
@@ -1087,15 +1405,9 @@ fig <- do.call(
     layout_params,
     list(
       p = fig,
-      xaxis = list(
-        title = "Observation",
-        titlefont = list(color = "#7f7f7f")
-      ),
-      yaxis = list(
-        title = "Residual",
-        titlefont = list(color = "#7f7f7f")
-      ),
-      sliders = sliders
+      xaxis = list(title = "Observation", titlefont = list(color = "#7f7f7f")),
+      yaxis = list(title = "Q-value", titlefont = list(color = "#7f7f7f")),
+      sliders = if (has_group) group_sliders else sliders
     )
   )
 )
@@ -1117,7 +1429,8 @@ min_y <- min(true_density$y)
 max_x <- max(true_density$x)
 max_y <- max(true_density$y)
 for (i in components) {
-  i_density <- density(final_model$calibration_statistics_all$predicted_y_in_cv[, i],
+  i_density <- density(
+    final_model$calibration_statistics_all$predicted_y_in_cv[, i],
     bw = true_density$bw,
     from = min(true_density$x),
     to = max(true_density$x)
@@ -1134,7 +1447,8 @@ for (i in components) {
 
 distr_list[opt_comp][[1]]$visible <- TRUE
 for (i in components) {
-  fig <- add_lines(fig,
+  fig <- add_lines(
+    fig,
     x = true_density$x,
     y = true_density$y,
     visible = distr_list[i][[1]]$visible,
@@ -1150,11 +1464,12 @@ for (i in components) {
 }
 
 for (i in components) {
-  fig <- add_lines(fig,
+  fig <- add_lines(
+    fig,
     x = distr_list[i][[1]]$pred$x,
     y = distr_list[i][[1]]$pred$y,
     visible = distr_list[i][[1]]$visible,
-    showlegend = T,
+    showlegend = TRUE,
     line = list(color = colrs[i]),
     hoverinfo = "x+y+text",
     type = "scatter",
@@ -1162,7 +1477,7 @@ for (i in components) {
     name = "Predicted density",
     text = "Predicted density",
     fill = "tozeroy",
-    fillcolor = rainbow(n_comps, alpha = 0.2)[i]
+    fillcolor = scales::alpha(colrs[i], 0.2)
   )
 }
 fig <- fig |> layout(
@@ -1196,9 +1511,10 @@ if (regression_selection[1]) cat("### Response Plot\n\n")
 #| eval: !expr regression_selection[1]
 fits <- final_model$model$fitted_y
 fig <- plot_ly()
+cal_predictions <- final_model$model$fitted_y
 line_x_y <- seq(
-  from = min(Y, fits),
-  to = max(Y, fits),
+  from = min(cal_predictions, Y, na.rm = TRUE),
+  to = max(cal_predictions, Y, na.rm = TRUE),
   length.out = n_observations
 )
 for (i in components) {
@@ -1207,43 +1523,120 @@ for (i in components) {
       x = line_x_y,
       y = line_x_y,
       visible = (i == opt_comp),
-      line = list(
-        dash = "dash",
-        width = 1,
-        color = "black"
-      ),
-      showlegend = F,
+      line = list(dash = "dash", width = 1, color = "black"),
+      showlegend = FALSE,
       hoverinfo = "text",
       type = "scatter",
       mode = "lines",
-      text = "regression line"
+      text = "identity line"
     )
 }
 for (i in components) {
-  fig <- add_markers(fig,
-    x = as.vector(Y),
-    y = as.vector(fits[, i]),
+  lin_model <- lm(cal_predictions[, i] ~ Y)
+  fig <- fig |> add_lines(
+    x = line_x_y,
+    y = lin_model$coefficients[1] + line_x_y * lin_model$coefficients[2],
     visible = (i == opt_comp),
-    hovertext = observation_names,
-    showlegend = F,
-    marker = list(color = colrs[i]),
-    hoverinfo = "x+y+text",
+    line = list(width = 1, color = if (has_group) "#555555" else "blue"),
+    showlegend = FALSE,
+    hoverinfo = "text",
     type = "scatter",
-    mode = "markers"
+    mode = "lines",
+    text = "regression line"
   )
 }
-fig <- fig |> layout(
-  xaxis = list(
-    title = "Reference Value",
-    titlefont = list(color = "#7f7f7f"),
-    range = c(floor(min(Y)), ceiling(max(Y)))
-  ),
-  yaxis = list(
-    title = "Predicted Reference",
-    titlefont = list(color = "#7f7f7f"),
-    range = c(floor(min(fits)), ceiling(max(fits)))
-  ),
-  sliders = sliders
+
+for (i in components) {
+  if (has_group) {
+    for (gi in seq_along(levels(group_factor))) {
+      g <- levels(group_factor)[gi]
+      idx <- which(group_factor == g)
+      fig <- do.call(
+        "add_markers",
+        c(
+          plotly_params["line" != names(plotly_params)],
+          list(
+            p = fig,
+            x = as.vector(Y[idx]),
+            y = cal_predictions[idx, i],
+            visible = (i == opt_comp),
+            hovertext = observation_names[idx],
+            name = g,
+            legendgroup = g,
+            legendrank = gi,
+            showlegend = TRUE,
+            marker = list(color = group_colors[[g]]),
+            hoverinfo = "x+y+text",
+            type = "scatter",
+            mode = "markers"
+          )
+        )
+      )
+    }
+  } else {
+    fig <- add_markers(
+      fig,
+      x = as.vector(Y),
+      y = as.vector(fits[, i]),
+      visible = (i == opt_comp),
+      hovertext = observation_names,
+      showlegend = FALSE,
+      marker = list(color = colrs[i]),
+      hoverinfo = "x+y+text",
+      type = "scatter",
+      mode = "markers"
+    )
+  }
+}
+
+
+# Build slider
+if (has_group) {
+  n_groups <- length(levels(group_factor))
+  n_resp_traces <- 2 * n_comps + n_comps * n_groups
+  resp_steps <- list()
+  for (i in components) {
+    vis <- rep(FALSE, n_resp_traces)
+    vis[i] <- TRUE                        # identity line
+    vis[n_comps + i] <- TRUE              # regression line
+    marker_start <- 2 * n_comps + (i - 1) * n_groups + 1
+    vis[marker_start:(marker_start + n_groups - 1)] <- TRUE
+    resp_steps[[i]] <- list(
+      args = list("visible", vis),
+      method = "restyle",
+      label = paste("Component", i),
+      value = as.character(i)
+    )
+  }
+  resp_sliders <- list(list(
+    currentvalue = list(prefix = "", font = list(color = "black", xanchor = "left")),
+    active = opt_comp - 1,
+    steps = resp_steps,
+    pad = list(t = 50, r = 50, b = 0, l = 50)
+  ))
+} else {
+  resp_sliders <- sliders
+}
+
+
+
+fig <- do.call(
+  "layout",
+  c(
+    layout_params,
+    list(
+      p = fig,
+      xaxis = list(
+        title = "Reference Value",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      yaxis = list(
+        title = "Predicted Reference",
+        titlefont = list(color = "#7f7f7f")
+      ),
+      sliders = resp_sliders
+    )
+  )
 )
 plotly_build2(fig)
 ```
@@ -1274,7 +1667,10 @@ for (i in components) {
       x = ~ti,
       y = ~ti,
       line = list(dash = "dash", width = 1, color = "black"),
-      name = "", showlegend = F, hoverinfo = "text", text = "regression line"
+      name = "",
+      showlegend = FALSE,
+      hoverinfo = "text",
+      text = "regression line"
     ) |>
     add_markers(
       x = ~true,
@@ -1301,33 +1697,61 @@ residual <- cal_stats$residual
 for (i in components) {
   fig <- fig |>
     add_segments(
-      x = 1:n_observations,
-      xend = 1:n_observations,
+      x = seq_len(n_observations),
+      xend = seq_len(n_observations),
       y = as.vector(residual[, i]),
       yend = 0,
       line = list(dash = "dash", width = 1, color = "black"),
-      showlegend = F,
+      showlegend = FALSE,
       visible = (i == opt_comp)
     )
 }
 for (i in components) {
-  fig <- do.call(
-    "add_markers",
-    c(
-      plotly_params["line" != names(plotly_params)],
-      list(
-        p = fig,
-        x = 1:n_observations,
-        y = as.vector(residual[, i]),
-        visible = (i == opt_comp),
-        hovertext = observation_names,
-        showlegend = F,
-        hoverinfo = "x+y+text",
-        type = "scatter",
-        mode = "markers"
+  if (has_group) {
+    for (gi in seq_along(levels(group_factor))) {
+      g <- levels(group_factor)[gi]
+      idx <- which(group_factor == g)
+      fig <- do.call(
+        "add_markers",
+        c(
+          plotly_params["line" != names(plotly_params)],
+          list(
+            p = fig,
+            x = idx,
+            y = as.vector(residual[idx, i]),
+            visible = (i == opt_comp),
+            hovertext = observation_names[idx],
+            name = g,
+            legendgroup = g,
+            legendrank = gi,
+            showlegend = TRUE,
+            marker = list(color = group_colors[[g]]),
+            hoverinfo = "x+y+text",
+            type = "scatter",
+            mode = "markers"
+          )
+        )
+      )
+    }
+  } else {
+    fig <- do.call(
+      "add_markers",
+      c(
+        plotly_params["line" != names(plotly_params)],
+        list(
+          p = fig,
+          x = seq_len(n_observations),
+          y = as.vector(residual[, i]),
+          visible = (i == opt_comp),
+          hovertext = observation_names,
+          showlegend = FALSE,
+          hoverinfo = "x+y+text",
+          type = "scatter",
+          mode = "markers"
+        )
       )
     )
-  )
+  }
 }
 fig <- do.call(
   "layout",
@@ -1335,15 +1759,9 @@ fig <- do.call(
     layout_params,
     list(
       p = fig,
-      xaxis = list(
-        title = "Observation",
-        titlefont = list(color = "#7f7f7f")
-      ),
-      yaxis = list(
-        title = "Residual",
-        titlefont = list(color = "#7f7f7f")
-      ),
-      sliders = sliders
+      xaxis = list(title = "Observation", titlefont = list(color = "#7f7f7f")),
+      yaxis = list(title = "Residual", titlefont = list(color = "#7f7f7f")),
+      sliders = if (has_group) group_sliders else sliders
     )
   )
 )
@@ -1376,7 +1794,7 @@ for (i in components) {
         width = 1,
         color = "black"
       ),
-      showlegend = F,
+      showlegend = FALSE,
       hoverinfo = "none",
       type = "scatter",
       mode = "lines"
@@ -1394,7 +1812,7 @@ for (i in components) {
         y = sort(std_residual[, i]),
         visible = (i == opt_comp),
         hovertext = paste("Observation", names(sort(std_residual[, i]))),
-        showlegend = F,
+        showlegend = FALSE,
         hoverinfo = "x+y+text",
         type = "scatter",
         mode = "markers"
@@ -1408,10 +1826,7 @@ fig <- do.call(
     layout_params,
     list(
       p = fig,
-      xaxis = list(
-        title = "Theoretical Normal Quantile",
-        titlefont = list(color = "#7f7f7f")
-      ),
+      xaxis = list(title = "Theoretical Normal Quantile", titlefont = list(color = "#7f7f7f")),
       yaxis = list(
         title = "Sample Quantile",
         titlefont = list(color = "#7f7f7f"),
@@ -1443,7 +1858,7 @@ for (i in components) {
     x = loess_smoother$x,
     y = loess_smoother$y,
     hoverinfo = "x+y+text",
-    showlegend = F,
+    showlegend = FALSE,
     text = "Loess smoother",
     visible = (i == opt_comp),
     type = "scatter",
@@ -1453,39 +1868,90 @@ for (i in components) {
 }
 
 for (i in components) {
-  fig <- do.call(
-    "add_markers",
-    c(
-      plotly_params["line" != names(plotly_params)],
-      list(
-        p = fig,
-        x = fits[, i],
-        y = as.vector(residual[, i]),
-        visible = (i == opt_comp),
-        hovertext = observation_names,
-        showlegend = F,
-        hoverinfo = "x+y+text",
-        type = "scatter",
-        mode = "markers"
+  if (has_group) {
+    for (gi in seq_along(levels(group_factor))) {
+      g <- levels(group_factor)[gi]
+      idx <- which(group_factor == g)
+      fig <- do.call(
+        "add_markers",
+        c(
+          plotly_params["line" != names(plotly_params)],
+          list(
+            p = fig,
+            x = fits[idx, i],
+            y = as.vector(residual[idx, i]),
+            visible = (i == opt_comp),
+            hovertext = observation_names[idx],
+            name = g,
+            legendgroup = g,
+            legendrank = gi,
+            showlegend = TRUE,
+            marker = list(color = group_colors[[g]]),
+            hoverinfo = "x+y+text",
+            type = "scatter",
+            mode = "markers"
+          )
+        )
+      )
+    }
+  } else {
+    fig <- do.call(
+      "add_markers",
+      c(
+        plotly_params["line" != names(plotly_params)],
+        list(
+          p = fig,
+          x = fits[, i],
+          y = as.vector(residual[, i]),
+          visible = (i == opt_comp),
+          hovertext = observation_names,
+          showlegend = FALSE,
+          hoverinfo = "x+y+text",
+          type = "scatter",
+          mode = "markers"
+        )
       )
     )
-  )
+  }
 }
+
+# Build slider
+if (has_group) {
+  n_groups <- length(levels(group_factor))
+  # Traces: n_comps loess lines + n_comps * n_groups markers
+  n_rvf_traces <- n_comps + n_comps * n_groups
+  rvf_steps <- list()
+  for (i in components) {
+    vis <- rep(FALSE, n_rvf_traces)
+    vis[i] <- TRUE
+    marker_start <- n_comps + (i - 1) * n_groups + 1
+    vis[marker_start:(marker_start + n_groups - 1)] <- TRUE
+    rvf_steps[[i]] <- list(
+      args = list("visible", vis),
+      method = "restyle",
+      label = paste("Component", i),
+      value = as.character(i)
+    )
+  }
+  rvf_sliders <- list(list(
+    currentvalue = list(prefix = "", font = list(color = "black", xanchor = "left")),
+    active = opt_comp - 1,
+    steps = rvf_steps,
+    pad = list(t = 50, r = 50, b = 0, l = 50)
+  ))
+} else {
+  rvf_sliders <- sliders
+}
+
 fig <- do.call(
   "layout",
   c(
     layout_params,
     list(
       p = fig,
-      xaxis = list(
-        title = "Fitted values",
-        titlefont = list(color = "#7f7f7f")
-      ),
-      yaxis = list(
-        title = "Residuals",
-        titlefont = list(color = "#7f7f7f")
-      ),
-      sliders = sliders
+      xaxis = list(title = "Fitted values", titlefont = list(color = "#7f7f7f")),
+      yaxis = list(title = "Residuals", titlefont = list(color = "#7f7f7f")),
+      sliders = rvf_sliders
     )
   )
 )
@@ -1509,7 +1975,7 @@ for (i in components) {
     x = loess_smoother$x,
     y = loess_smoother$y,
     hoverinfo = "x+y+text",
-    showlegend = F,
+    showlegend = FALSE,
     text = "Loess smoother",
     visible = (i == opt_comp),
     type = "scatter",
@@ -1519,39 +1985,89 @@ for (i in components) {
 }
 
 for (i in components) {
-  fig <- do.call(
-    "add_markers",
-    c(
-      plotly_params["line" != names(plotly_params)],
-      list(
-        p = fig,
-        x = fits[, i],
-        y = as.vector(sqrt(abs(std_residual[, i]))),
-        visible = (i == opt_comp),
-        hovertext = observation_names,
-        showlegend = F,
-        hoverinfo = "x+y+text",
-        type = "scatter",
-        mode = "markers"
+  if (has_group) {
+    for (gi in seq_along(levels(group_factor))) {
+      g <- levels(group_factor)[gi]
+      idx <- which(group_factor == g)
+      fig <- do.call(
+        "add_markers",
+        c(
+          plotly_params["line" != names(plotly_params)],
+          list(
+            p = fig,
+            x = fits[idx, i],
+            y = as.vector(sqrt(abs(std_residual[idx, i]))),
+            visible = (i == opt_comp),
+            hovertext = observation_names[idx],
+            name = g,
+            legendgroup = g,
+            legendrank = gi,
+            showlegend = TRUE,
+            marker = list(color = group_colors[[g]]),
+            hoverinfo = "x+y+text",
+            type = "scatter",
+            mode = "markers"
+          )
+        )
+      )
+    }
+  } else {
+    fig <- do.call(
+      "add_markers",
+      c(
+        plotly_params["line" != names(plotly_params)],
+        list(
+          p = fig,
+          x = fits[, i],
+          y = as.vector(sqrt(abs(std_residual[, i]))),
+          visible = (i == opt_comp),
+          hovertext = observation_names,
+          showlegend = FALSE,
+          hoverinfo = "x+y+text",
+          type = "scatter",
+          mode = "markers"
+        )
       )
     )
-  )
+  }
 }
+
+# Build slider
+if (has_group) {
+  n_groups <- length(levels(group_factor))
+  n_sl_traces <- n_comps + n_comps * n_groups
+  sl_steps <- list()
+  for (i in components) {
+    vis <- rep(FALSE, n_sl_traces)
+    vis[i] <- TRUE
+    marker_start <- n_comps + (i - 1) * n_groups + 1
+    vis[marker_start:(marker_start + n_groups - 1)] <- TRUE
+    sl_steps[[i]] <- list(
+      args = list("visible", vis),
+      method = "restyle",
+      label = paste("Component", i),
+      value = as.character(i)
+    )
+  }
+  sl_sliders <- list(list(
+    currentvalue = list(prefix = "", font = list(color = "black", xanchor = "left")),
+    active = opt_comp - 1,
+    steps = sl_steps,
+    pad = list(t = 50, r = 50, b = 0, l = 50)
+  ))
+} else {
+  sl_sliders <- sliders
+}
+
 fig <- do.call(
   "layout",
   c(
     layout_params,
     list(
       p = fig,
-      xaxis = list(
-        title = "Fitted Values",
-        titlefont = list(color = "#7f7f7f")
-      ),
-      yaxis = list(
-        title = "Square Root of Standardized Residuals",
-        titlefont = list(color = "#7f7f7f")
-      ),
-      sliders = sliders
+      xaxis = list(title = "Fitted Values", titlefont = list(color = "#7f7f7f")),
+      yaxis = list(title = "Square Root of Standardized Residuals", titlefont = list(color = "#7f7f7f")),
+      sliders = sl_sliders
     )
   )
 )
@@ -1577,7 +2093,7 @@ for (i in components) {
     x = loess_smoother$x,
     y = loess_smoother$y,
     hoverinfo = "x+y+text",
-    showlegend = F,
+    showlegend = FALSE,
     text = "Loess smoother",
     visible = (i == opt_comp),
     type = "scatter",
@@ -1587,40 +2103,92 @@ for (i in components) {
 }
 
 for (i in components) {
-  fig <- do.call(
-    "add_markers",
-    c(
-      plotly_params["line" != names(plotly_params)],
-      list(
-        p = fig,
-        x = hat(x = fits[, i]),
-        y = as.vector(std_residual[, i]),
-        visible = (i == opt_comp),
-        hovertext = observation_names,
-        showlegend = F,
-        marker = list(color = colrs[i]),
-        hoverinfo = "x+y+text",
-        type = "scatter",
-        mode = "markers"
+  leverage_i <- hat(x = fits[, i])
+  if (has_group) {
+    for (gi in seq_along(levels(group_factor))) {
+      g <- levels(group_factor)[gi]
+      idx <- which(group_factor == g)
+      fig <- do.call(
+        "add_markers",
+        c(
+          plotly_params["line" != names(plotly_params)],
+          list(
+            p = fig,
+            x = leverage_i[idx],
+            y = as.vector(std_residual[idx, i]),
+            visible = (i == opt_comp),
+            hovertext = observation_names[idx],
+            name = g,
+            legendgroup = g,
+            legendrank = gi,
+            showlegend = TRUE,
+            marker = list(color = group_colors[[g]]),
+            hoverinfo = "x+y+text",
+            type = "scatter",
+            mode = "markers"
+          )
+        )
+      )
+    }
+  } else {
+    fig <- do.call(
+      "add_markers",
+      c(
+        plotly_params["line" != names(plotly_params)],
+        list(
+          p = fig,
+          x = leverage_i,
+          y = as.vector(std_residual[, i]),
+          visible = (i == opt_comp),
+          hovertext = observation_names,
+          showlegend = FALSE,
+          marker = list(color = colrs[i]),
+          hoverinfo = "x+y+text",
+          type = "scatter",
+          mode = "markers"
+        )
       )
     )
-  )
+  }
 }
+
+
+# Build slider
+if (has_group) {
+  n_groups <- length(levels(group_factor))
+  n_lev_traces <- n_comps + n_comps * n_groups
+  lev_steps <- list()
+  for (i in components) {
+    vis <- rep(FALSE, n_lev_traces)
+    vis[i] <- TRUE
+    marker_start <- n_comps + (i - 1) * n_groups + 1
+    vis[marker_start:(marker_start + n_groups - 1)] <- TRUE
+    lev_steps[[i]] <- list(
+      args = list("visible", vis),
+      method = "restyle",
+      label = paste("Component", i),
+      value = as.character(i)
+    )
+  }
+  lev_sliders <- list(list(
+    currentvalue = list(prefix = "", font = list(color = "black", xanchor = "left")),
+    active = opt_comp - 1,
+    steps = lev_steps,
+    pad = list(t = 50, r = 50, b = 0, l = 50)
+  ))
+} else {
+  lev_sliders <- sliders
+}
+
 fig <- do.call(
   "layout",
   c(
     layout_params,
     list(
       p = fig,
-      xaxis = list(
-        title = "Leverage",
-        titlefont = list(color = "#7f7f7f")
-      ),
-      yaxis = list(
-        title = "Standardized Residuals",
-        titlefont = list(color = "#7f7f7f")
-      ),
-      sliders = sliders
+      xaxis = list(title = "Leverage", titlefont = list(color = "#7f7f7f")),
+      yaxis = list(title = "Standardized Residuals", titlefont = list(color = "#7f7f7f")),
+      sliders = lev_sliders
     )
   )
 )
@@ -1644,7 +2212,7 @@ if (val_selection[1]) cat("### Predicted vs. Reference\n\n")
 n_vals <- length(validations$validation)
 refs <- validations$reference
 fig <- plot_ly()
-for (i in 1:n_vals) {
+for (i in seq_len(n_vals)) {
   preds <- as.matrix(validations$validation[[i]]$val_results[, "y_hat"])
   error <- as.matrix(validations$validation[[i]]$val_results[, "error"])
   line_x_y <- seq(
@@ -1661,14 +2229,14 @@ for (i in 1:n_vals) {
       width = 1,
       color = "black"
     ),
-    showlegend = F,
+    showlegend = FALSE,
     hoverinfo = "text",
     type = "scatter",
     mode = "lines",
     text = "identity line"
   )
 }
-for (i in 1:n_vals) {
+for (i in seq_len(n_vals)) {
   preds <- as.matrix(validations$validation[[i]]$val_results[, "y_hat"])
   error <- as.matrix(validations$validation[[i]]$val_results[, "error"])
   line_x_y <- seq(
@@ -1682,14 +2250,14 @@ for (i in 1:n_vals) {
     y = lin_model$coefficients[1] + line_x_y * lin_model$coefficients[2],
     visible = (i == 1),
     line = list(width = 1, color = colrs[i]),
-    showlegend = F,
+    showlegend = FALSE,
     hoverinfo = "text",
     type = "scatter",
     mode = "lines",
     text = "regression line"
   )
 }
-for (i in 1:n_vals) {
+for (i in seq_len(n_vals)) {
   preds <- as.matrix(validations$validation[[i]]$val_results[, "y_hat"])
   error <- as.matrix(validations$validation[[i]]$val_results[, "error"])
   fig <- fig |> add_markers(
@@ -1697,14 +2265,14 @@ for (i in 1:n_vals) {
     y = as.vector(preds),
     visible = (i == 1),
     hovertext = paste("Observation", rownames(preds)),
-    showlegend = F,
+    showlegend = FALSE,
     marker = list(color = colrs[i]),
     hoverinfo = "x+y+text",
     type = "scatter",
     mode = "markers"
   )
 }
-for (i in 1:n_vals) {
+for (i in seq_len(n_vals)) {
   line_x_y <- seq(
     from = min(preds, refs, na.rm = TRUE),
     to = max(preds, refs, na.rm = TRUE),
@@ -1721,40 +2289,34 @@ for (i in 1:n_vals) {
   } else {
     model_info <- ""
   }
-  fig <- fig |> add_text(
-    text = paste(model_info,
-      paste(
-        "Validation: <b>R<sup>2</sup> =",
-        round(validations$validation[[i]]$val_stats["rsq"], digits = 2),
-        "; RMSE =",
-        round(validations$validation[[i]]$val_stats["rmse"], digits = 2)
-      ),
-      collapse = "\n"
+  fig <- fig |> add_text(text = paste(
+    model_info,
+    paste(
+      "Validation: <b>R<sup>2</sup> =",
+      round(validations$validation[[i]]$val_stats["rsq"], digits = 2),
+      "; RMSE =",
+      round(validations$validation[[i]]$val_stats["rmse"], digits = 2)
     ),
-    x = line_x_y[1],
-    y = line_x_y[length(line_x_y)],
-    textposition = "bottom right",
-    visible = (i == 1),
-    showlegend = F,
-    hoverinfo = "text",
-    fillcolor = "red"
+    collapse = "\n"
+  ),
+  x = line_x_y[1],
+  y = line_x_y[length(line_x_y)],
+  textposition = "bottom right",
+  visible = (i == 1),
+  showlegend = FALSE,
+  hoverinfo = "text",
+  fillcolor = "red"
   )
 }
 
 fig <- fig |>
   layout(
-    xaxis = list(
-      title = "Reference Value",
-      titlefont = list(color = "#7f7f7f")
-    ),
-    yaxis = list(
-      title = "Predicted Reference",
-      titlefont = list(color = "#7f7f7f")
-    )
+    xaxis = list(title = "Reference Value", titlefont = list(color = "#7f7f7f")),
+    yaxis = list(title = "Predicted Reference", titlefont = list(color = "#7f7f7f"))
   )
 if (n_vals > 1) {
   val_steps <- list()
-  for (i in 1:n_vals) {
+  for (i in seq_len(n_vals)) {
     step <- list(
       args = list("visible", rep(FALSE, n_vals)),
       method = "restyle",

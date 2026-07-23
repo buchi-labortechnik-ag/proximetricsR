@@ -122,7 +122,8 @@ write_rtf <- function(object, path, tsv_path, application_name = "Untitled",
     } else {
       model_p <- "initial_fit"
     }
-    Y <- model[[model_p]]$calibration_statistics_all$Target
+    cal_stats <- model[[model_p]]$calibration_statistics_all
+    Y <- cal_stats$Target
     target_line <- paste(model$target_variable, floor(min(Y, na.rm = T)), ceiling(max(Y, na.rm = T)))
     if (is.null(model$metadata)) {
       target_line <- paste(target_line, "0.0")
@@ -147,7 +148,7 @@ write_rtf <- function(object, path, tsv_path, application_name = "Untitled",
     }
     snrs <- snrs[1]
 
-    sample_ids <- model[[model_p]]$calibration_statistics_all$Sample_index
+    sample_ids <- cal_stats$Sample_index
     records <- NULL
     start <- sample_ids[1]
     for (indces in sample_ids) {
@@ -276,14 +277,14 @@ write_rtf <- function(object, path, tsv_path, application_name = "Untitled",
       sep = "\\tab "
     )
     opt_comp <- model[[model_p]]$ncomp
-    end <- length(model[[model_p]]$calibration_statistics_all$Sample_index)
+    end <- length(cal_stats$Sample_index)
     if (end > 200) {
       start <- end - 200
     } else {
       start <- 1
     }
     for (i in start:end) {
-      get_id <- tsv_data[model[[model_p]]$calibration_statistics_all$Sample_index[i], "ID"]
+      get_id <- tsv_data[cal_stats$Sample_index[i], "ID"]
       if (get_id == "NA") {
         get_id <- "missing"
       }
@@ -293,12 +294,12 @@ write_rtf <- function(object, path, tsv_path, application_name = "Untitled",
           paste0("2:", snrs),
           "1",
           strtrim(get_id, width = 25),
-          signif(model[[model_p]]$calibration_statistics[i, "Target"]),
-          signif(model[[model_p]]$calibration_statistics[i, "fitted_y"]),
-          signif(model[[model_p]]$calibration_statistics[i, "residual"]),
-          signif(model[[model_p]]$calibration_statistics[i, "Mahalanobis"]),
+          signif(cal_stats$Target[i]),
+          signif(cal_stats$fitted_y[i, opt_comp]),
+          signif(cal_stats$residual[i, opt_comp]),
+          signif(cal_stats$Mahalanobis[i, opt_comp]),
           if (model$control$validation_type %in% c("loo", "kfold")) {
-            signif(model[[model_p]]$calibration_statistics[i, "Q_value"])
+            signif(cal_stats$Q_value[i, opt_comp])
           },
           sep = "\\tab "
         )
@@ -306,19 +307,16 @@ write_rtf <- function(object, path, tsv_path, application_name = "Untitled",
     }
     calibration_results <- paste(calibration_results, collapse = paste0(eol, "\\par "))
 
-    r_sq <- (cor(
-      model[[model_p]]$calibration_statistics_all$Target,
-      model[[model_p]]$calibration_statistics_all$fitted_y
-    )^2)[opt_comp]
+    r_sq <- (cor(cal_stats$Target, cal_stats$fitted_y)^2)[opt_comp]
     if (!is.null(model[[model_p]]$model_cv)) {
       r_sq_cv <- paste0(
         "\\tab R{\\sub cv}\\'b2=",
         signif(model[[model_p]]$model_cv$grid[opt_comp, "rsq"])
       )
-      if (!is.null(model[[model_p]]$calibration_statistics_all$cv_residual)) {
+      if (!is.null(cal_stats$cv_residual)) {
         sigma_cv <- paste0(
           "\\tab \\u0963?{\\sub cv}=",
-          signif(sd(model[[model_p]]$calibration_statistics[, "cv_residual"]))
+          signif(sd(cal_stats$cv_residual[, opt_comp]))
         )
       } else {
         sigma_cv <- ""
@@ -369,7 +367,7 @@ write_rtf <- function(object, path, tsv_path, application_name = "Untitled",
         "\\tab \\tab \\tab \\tab \\b R\\'b2=",
         signif(r_sq),
         "\\tab\\u0963?{\\sub i}=",
-        signif(sd(model[[model_p]]$calibration_statistics[, "residual"])),
+        signif(sd(cal_stats$residual[, opt_comp])),
         r_sq_cv,
         sigma_cv,
         "\\b0 \\f0"
@@ -395,7 +393,8 @@ write_rtf <- function(object, path, tsv_path, application_name = "Untitled",
         ""
       )
       n_deletes <- n_deletes + length(model$skipped_indices$manually_skipped)
-      Y <- model$final_model$calibration_statistics_all$Target
+      cal_stats <- model$final_model$calibration_statistics_all
+      Y <- cal_stats$Target
       target_line <- paste(model$target_variable, floor(min(Y, na.rm = T)), ceiling(max(Y, na.rm = T)))
       if (is.null(model$metadata)) {
         target_line <- paste(target_line, "0.0")
@@ -414,7 +413,7 @@ write_rtf <- function(object, path, tsv_path, application_name = "Untitled",
       }
       snrs <- snrs[1]
 
-      sample_ids <- model$final_model$calibration_statistics_all$Sample_index
+      sample_ids <- cal_stats$Sample_index
       records <- NULL
       start <- sample_ids[1]
       for (indces in sample_ids) {
@@ -545,14 +544,14 @@ write_rtf <- function(object, path, tsv_path, application_name = "Untitled",
       )
 
       opt_comp <- model$final_model$ncomp
-      end <- length(model$final_model$calibration_statistics_all$Sample_index)
+      end <- length(cal_stats$Sample_index)
       if (end > 200) {
         start <- end - 200
       } else {
         start <- 1
       }
       for (i in start:end) {
-        get_id <- tsv_data[model$final_model$calibration_statistics_all$Sample_index[i], "ID"]
+        get_id <- tsv_data[cal_stats$Sample_index[i], "ID"]
         if (get_id == "") {
           get_id <- "missing"
         }
@@ -562,12 +561,12 @@ write_rtf <- function(object, path, tsv_path, application_name = "Untitled",
             paste0("2:", snrs),
             "1",
             strtrim(get_id, width = 25),
-            signif(model$final_model$calibration_statistics[i, "Target"]),
-            signif(model$final_model$calibration_statistics[i, "fitted_y"]),
-            signif(model$final_model$calibration_statistics[i, "residual"]),
-            signif(model$final_model$calibration_statistics[i, "Mahalanobis"]),
+            signif(cal_stats$Target[i]),
+            signif(cal_stats$fitted_y[i, opt_comp]),
+            signif(cal_stats$residual[i, opt_comp]),
+            signif(cal_stats$Mahalanobis[i, opt_comp]),
             if (model$control$validation_type %in% c("loo", "kfold")) {
-              signif(model$final_model$calibration_statistics[i, "Q_value"])
+              signif(cal_stats$Q_value[i, opt_comp])
             },
             sep = "\\tab "
           )
@@ -575,19 +574,16 @@ write_rtf <- function(object, path, tsv_path, application_name = "Untitled",
       }
       calibration_results <- paste(calibration_results, collapse = paste0(eol, "\\par "))
 
-      r_sq <- (cor(
-        model$final_model$calibration_statistics_all$Target,
-        model$final_model$calibration_statistics_all$fitted_y
-      )^2)[opt_comp]
+      r_sq <- (cor(cal_stats$Target, cal_stats$fitted_y)^2)[opt_comp]
       if (!is.null(model$final_model$model_cv)) {
         r_sq_cv <- paste0(
           "\\tab R{\\sub cv}\\'b2=",
           signif(model$final_model$model_cv$grid[opt_comp, "rsq"])
         )
-        if (!is.null(model$final_model$calibration_statistics_all$cv_residual)) {
+        if (!is.null(cal_stats$cv_residual)) {
           sigma_cv <- paste0(
             "\\tab \\u0963?{\\sub cv}=",
-            signif(sd(model$final_model$calibration_statistics[, "cv_residual"]))
+            signif(sd(cal_stats$cv_residual[, opt_comp]))
           )
         } else {
           sigma_cv <- ""
@@ -634,7 +630,7 @@ write_rtf <- function(object, path, tsv_path, application_name = "Untitled",
           "\\tab \\tab \\tab \\tab \\b R\\'b2=",
           signif(r_sq),
           "\\tab\\u0963?{\\sub i}=",
-          signif(sd(model$final_model$calibration_statistics[, "residual"])),
+          signif(sd(cal_stats$residual[, opt_comp])),
           r_sq_cv,
           sigma_cv,
           "\\b0 \\f0"
