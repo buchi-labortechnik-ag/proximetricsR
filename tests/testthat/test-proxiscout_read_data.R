@@ -143,3 +143,125 @@ test_that("non-spectral column SampleName remains in the data.frame", {
 test_that("CSV result with 2 spectral columns does not get proxiscout_data class", {
   expect_false(inherits(result_csv, "proxiscout_data"))
 })
+
+# -----------------------------------------------------------------------
+# Two-file merge tests (file + references_file)
+# -----------------------------------------------------------------------
+
+write_spec_csv <- function(df) {
+  path <- tempfile(fileext = ".csv")
+  write.csv(df, path, row.names = FALSE)
+  path
+}
+
+test_that("two-file merge: happy path with shared id column", {
+  x1 <- data.frame(
+    SampleID = c("A", "B", "C"),
+    "3921" = c(50.1, 48.3, 47.0),
+    "3942" = c(51.2, 49.1, 48.5),
+    check.names = FALSE
+  )
+  refs1 <- data.frame(SampleID = c("A", "B", "C"), moisture = c(10, 20, 30))
+  result <- proxiscout_read_data(write_spec_csv(x1), write_spec_csv(refs1))
+
+  expect_equal(nrow(result), 3L)
+  expect_equal(result$moisture, c(10, 20, 30))
+  expect_true(".repetition_group" %in% colnames(result))
+  expect_equal(result$.repetition_group, c(1L, 2L, 3L))
+})
+
+test_that("two-file merge: shared columns in different order use the id-like column", {
+  x2 <- data.frame(
+    Date = c("2024-01-01", "2024-01-02", "2024-01-03"),
+    SampleID = c("A", "B", "C"),
+    "3921" = c(50.1, 48.3, 47.0),
+    "3942" = c(51.2, 49.1, 48.5),
+    check.names = FALSE
+  )
+  refs2 <- data.frame(
+    SampleID = c("A", "B", "C"),
+    Date = c("2024-01-01", "2024-01-02", "2024-01-03"),
+    moisture = c(11, 22, 33)
+  )
+  result <- proxiscout_read_data(write_spec_csv(x2), write_spec_csv(refs2))
+
+  expect_equal(nrow(result), 3L)
+  expect_equal(result$moisture, c(11, 22, 33))
+})
+
+test_that("two-file merge: falls back to id-regex detection when no common column names", {
+  x3 <- data.frame(
+    SampleName = c("A", "B", "C"),
+    "3921" = c(50.1, 48.3, 47.0),
+    "3942" = c(51.2, 49.1, 48.5),
+    check.names = FALSE
+  )
+  refs3 <- data.frame(SampleID = c("A", "B", "C"), moisture = c(1, 2, 3))
+  result <- proxiscout_read_data(write_spec_csv(x3), write_spec_csv(refs3))
+
+  expect_equal(nrow(result), 3L)
+  expect_equal(result$moisture, c(1, 2, 3))
+})
+
+test_that("two-file merge: supports a mixture of repeated and non-repeated sample ids", {
+  x4 <- data.frame(
+    SampleID = c("A_1", "B", "C_2"),
+    "3921" = c(50.1, 48.3, 47.0),
+    "3942" = c(51.2, 49.1, 48.5),
+    check.names = FALSE
+  )
+  refs4 <- data.frame(SampleID = c("A", "B", "C"), moisture = c(100, 200, 300))
+  result <- proxiscout_read_data(write_spec_csv(x4), write_spec_csv(refs4))
+
+  expect_equal(nrow(result), 3L)
+  expect_false(anyNA(result$moisture))
+  expect_equal(result$moisture, c(100, 200, 300))
+})
+
+test_that("two-file merge: duplicated reference rows are deduplicated (first occurrence kept)", {
+  x5 <- data.frame(
+    SampleID = c("A", "B"),
+    "3921" = c(50.1, 48.3),
+    "3942" = c(51.2, 49.1),
+    check.names = FALSE
+  )
+  refs5 <- data.frame(SampleID = c("A", "A", "B"), moisture = c(10, 999, 20))
+  result <- proxiscout_read_data(write_spec_csv(x5), write_spec_csv(refs5))
+
+  expect_equal(nrow(result), 2L)
+  expect_equal(result$moisture, c(10, 20))
+})
+
+test_that("two-file merge: unmatched samples get NA references but a valid, grouped .repetition_group", {
+  x7 <- data.frame(
+    SampleID = c("A", "B", "Z_1", "Z_2"),
+    "3921" = c(50.1, 48.3, 47.0, 46.5),
+    "3942" = c(51.2, 49.1, 48.5, 48.0),
+    check.names = FALSE
+  )
+  refs7 <- data.frame(SampleID = c("A", "B"), moisture = c(10, 20))
+  result <- proxiscout_read_data(write_spec_csv(x7), write_spec_csv(refs7))
+
+  expect_equal(nrow(result), 4L)
+  expect_equal(result$moisture, c(10, 20, NA, NA))
+  expect_false(anyNA(result$.repetition_group))
+  # The two unmatched repeats of "Z" (Z_1, Z_2) share the same fallback group
+  expect_equal(result$.repetition_group[3], result$.repetition_group[4])
+  # The fallback group must not collide with any reference-matched group
+  expect_false(result$.repetition_group[3] %in% result$.repetition_group[1:2])
+})
+
+test_that("two-file merge: errors when no common or id-like column can be found", {
+  x6 <- data.frame(
+    Foo = c("x", "y"),
+    "3921" = c(50.1, 48.3),
+    "3942" = c(51.2, 49.1),
+    check.names = FALSE
+  )
+  refs6 <- data.frame(Bar = c("x", "y"), moisture = c(1, 2))
+
+  expect_error(
+    proxiscout_read_data(write_spec_csv(x6), write_spec_csv(refs6)),
+    "No common column names or sample ID columns detected"
+  )
+})

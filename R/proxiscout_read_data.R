@@ -2,16 +2,16 @@
 #'
 #' @description
 #'
-#' Reads spectral data files in either `.csv` or `.xlsx` format, identifies
+#' Reads spectral data files in either \code{.csv} or \code{.xlsx} format, identifies
 #' spectral data columns based on numeric column names, converts reflectance values
-#' from percentages to absolute units, and stores them in a matrix under the `spc`
+#' from percentages to absolute units, and stores them in a matrix under the \code{spc}
 #' column.
 #'
 #' @usage
 #' proxiscout_read_data(file, references_file)
 #'
 #' @param file A character string specifying the path to the input file. The
-#' file must be either have `.csv` or a `.xlsx` extension.
+#' file must be either have \code{.csv} or a \code{.xlsx} extension.
 #' @param references_file An optional character string specifying the path to
 #' a file containing reference values. See details.
 #'
@@ -19,49 +19,63 @@
 #' This function allows the user to give the path to one or two files at once.
 #'
 #' If two file paths are given, the files are assumed to contain the spectral
-#' data in `file`, while `references_file` contains only the reference values.
-#' Both files must have a column that contains the regex `sample`,
-#' and the entries must coincide (excluding potential repetition identificators).
-#' These files are then merged together by the column with the name containing `sample`.
+#' data in \code{file}, while \code{references_file} contains only the reference values.
+#' Both files must share a column name, which respect to which the files are merged.
+#' Entries in these columns must coincide. If none of the entries do, potential
+#' repetition indicators are removed (see \code{\link{proxiscout_repetition_pattern}})
+#' before the merge.
 #'
-#' If only `file` is given, it must contain the spectral columns, and may or may
+#' If only \code{file} is given, it must contain the spectral columns, and may or may
 #' not contain reference values.
 #'
-#' In general, inside `file`, any column AFTER the spectra are identified as
-#' predictions, and are collected into a `matrix` called `predictions` (if any
-#' exist). Columns that contain numerical values and do not contain typical
+#' In general, inside \code{file}, any column AFTER the spectra are identified as
+#' predictions, and are collected into a \code{matrix} called \code{predictions}
+#' (if any exist). Columns that contain numerical values and do not contain typical
 #' column names (see \code{\link{extract_property_names}} for more details)
 #' that appear BEFORE the spectral data columns are identified reference values.
 #'
 #' The function:
-#' - ensures the file extensions are valid (`.csv` or `.xlsx`).
-#' - reads CSV files using `read.csv()` and Excel files using `readxl::read_excel()`.
+#' - ensures the file extensions are valid (\code{.csv} or \code{.xlsx}).
+#' - reads CSV files using \code{\link[utils]{read.csv}} and Excel files using
+#' \code{\link[readxl]{read_excel}}.
 #' - extracts spectral data (columns with numeric names).
 #' - if exactly 257 columns with numeric names are found, then:
 #'   \itemize{
-#'     \item the spectral matrix is assigned the typical proxiscout wavenumbers (\code{\link{get_proxiscout_wavenumbers}})
-#'     \item the data is assigned class `"proxiscout_data"`
+#'     \item the spectral matrix is assigned the typical proxiscout wavenumbers
+#'        (\code{\link{get_proxiscout_wavenumbers}})
+#'     \item the data is assigned class \code{"proxiscout_data"}.
 #'     \item spectral matrix is converted from percentage (0 to 100) to absolute (0 to 1) units.
 #'   }
 #' - if the number of columns with numeric names is not 257, the spectral matrix is assigned the wavelengths/wavenumbers in the header of the file.
-#' - stores the spectral data in a matrix named `spc`.
-#' - stores columns after the spectral data in a matrix named `predictions` (if any exist).
-#' - merges files together by the sample column if multiple files are given.
+#' - stores the spectral data in a matrix named \code{spc}.
+#' - stores columns after the spectral data in a matrix named \code{predictions} (if any exist).
+#' - merges files together by a common column if multiple files are given.
 #' @note
 #' This function assumes spectral column names follow a strict numeric pattern
 #' (e.g. "3921.0") and removes any prefixed characters such as "X" that may be added
 #' by \code{read.csv}. These names are converted to numeric and used as column names
 #' of the spectral matrix.
 #'
-#' @return A `data.frame` where:
-#'   - Spectral data is stored as a **matrix** in the `spc` column.
-#'   - Columns identified as predictions are stored as a **matrix** in the `predictions` column.
+#' @return A \code{data.frame} where:
+#'   - Spectral data is stored as a **matrix** in the \code{spc} column.
+#'   - Columns identified as predictions are stored as a **matrix** in the \code{predictions} column.
 #'   - Other non-spectral metadata columns remain unchanged.
-#'   - Multiple files are merged into a single `data.frame`.
-#'   - If the files contain 257 columns in `spc`, the data is assigned class
-#'   `"proxiscout_data"`.
+#'   - Multiple files are merged into a single \code{data.frame}.
+#'   - If the files contain 257 columns in \code{spc}, the data is assigned class
+#'   \code{"proxiscout_data"}.
+#'   - A \code{.repetition_group} integer column is added, identifying rows that
+#'   correspond to repeated scans of the same sample: for two-file input, rows
+#'   merged to the same reference row share a group id; for single-file input,
+#'   groups are derived from the sample ID column's repetition suffix (see
+#'   \code{\link{proxiscout_repetition_pattern}}), optionally disambiguated by
+#'   scanner/device and date columns when present. This column is meant for
+#'   downstream aggregation of repeated measurements and is not guaranteed to be
+#'   meaningful if no ID-like column is found in the input. For two-file input,
+#'   rows in \code{file} with no matching sample in \code{references_file} have
+#'   \code{NA} reference columns; \code{.repetition_group} is still assigned for
+#'   these rows (grouped by their own sample id) so that their spectra can be
+#'   aggregated even though no reference value is available.
 #' @author Leonardo Ramirez-Lopez, Claudio Orellano
-#'
 #' @export
 proxiscout_read_data <- function(file, references_file) {
   ext <- file_ext(file)
@@ -72,6 +86,7 @@ proxiscout_read_data <- function(file, references_file) {
   } else {
     stop(paste("Unsupported file format:", ext))
   }
+  id_regex <- "^id$|^sample[ _.-]?name$|^name$|^sample[ _.-]?id$"
   x_colnames <- colnames(x)
   cspc <- grep("^[0-9]{3}[0-9]*\\.?[0-9]*[0-9]$|^[0-9]{3,}$", x_colnames)
   num_colnames <- gsub("^X", "", colnames(x[, cspc, drop = FALSE])) |> as.numeric()
@@ -108,28 +123,51 @@ proxiscout_read_data <- function(file, references_file) {
     } else {
       stop(paste("Unsupported file format for reference file:", ref_ext))
     }
-    # Identify the sample columns for both the file and references file
-    x_sample_col <- which(grepl("sample", colnames(x), ignore.case = TRUE))
-    refs_sample_col <- which(grepl("sample", colnames(refs), ignore.case = TRUE))
-    if (length(x_sample_col) < 1) {
-      stop("Unable to identify sample ID column in spectral data file for merging files")
+    # Identify the column to use for merging the files. Prefer a common column
+    # name that also looks like a sample identifier; if none of the common
+    # columns look like an ID, fall back to the first common column.
+    common_cols <- intersect(colnames(x), colnames(refs))
+    merge_col <- NULL
+    if (length(common_cols) >= 1) {
+      id_common_cols <- common_cols[grepl(id_regex, common_cols, ignore.case = TRUE)]
+      merge_col <- if (length(id_common_cols) >= 1) id_common_cols[1] else common_cols[1]
     }
-    if (length(refs_sample_col) < 1) {
-      stop("Unable to identify sample ID column in references file for merging files")
+    if (!is.null(merge_col)) {
+      x_sample_col <- which(colnames(x) == merge_col)[1]
+      refs_sample_col <- which(colnames(refs) == merge_col)[1]
+    } else if (any(grepl(id_regex, colnames(x), ignore.case = TRUE)) &&
+               any(grepl(id_regex, colnames(refs), ignore.case = TRUE))) {
+      # No common column names; fall back to detecting an ID-like column
+      # independently in each file (the ID column names may differ).
+      x_sample_col <- grep(id_regex, colnames(x), ignore.case = TRUE) |> head(1)
+      refs_sample_col <- grep(id_regex, colnames(refs), ignore.case = TRUE) |> head(1)
+    } else {
+      # Otherwise, throw an error - we do not know how we can merge those files
+      stop("No common column names or sample ID columns detected across files for merging the files")
     }
-    refs_sample_colname <- colnames(refs)[refs_sample_col[1]]
+    # If the names do not contain regex ID, sample or name, rename the columns to sampleName
+    if (!grepl(id_regex, colnames(x)[x_sample_col], ignore.case = TRUE)) colnames(x)[x_sample_col] <- "sampleName"
+    if (!grepl(id_regex, colnames(refs)[refs_sample_col], ignore.case = TRUE)) colnames(refs)[refs_sample_col] <- "sampleName"
+    
     # Drop any row in refs that has duplicated sample id
-    refs <- refs[!duplicated(refs[[refs_sample_colname]]), , drop = FALSE]
-
-    x$clean_sample_id <- gsub(proxiscout_repetition_pattern(), "", x[[x_sample_col[1]]])
+    refs <- refs[!duplicated(refs[[refs_sample_col]]), , drop = FALSE]
+    # Add an internal column for the sample repetitions to the references - after merging,
+    # if there were repetitions, the group will indicate to which groups they belong
+    refs[[".repetition_group"]] <- seq_len(nrow(refs))
+    # For each row, use the raw sample id if it already matches a reference
+    # (i.e. no repetition suffix); otherwise fall back to the suffix-stripped
+    # id. This supports files where only some samples have repetitions.
+    raw_id <- x[[x_sample_col]]
+    stripped_id <- gsub(proxiscout_repetition_pattern(), "", raw_id)
+    x[[".clean_sample_id"]] <- ifelse(raw_id %in% refs[[refs_sample_col]], raw_id, stripped_id)
     # For ordering purposes, add a column that we will remove later
     x$.order <- seq_len(nrow(x))
 
     x <- merge(
       x,
       refs,
-      by.x = "clean_sample_id",
-      by.y = refs_sample_colname,
+      by.x = ".clean_sample_id",
+      by.y = colnames(refs)[refs_sample_col],
       all.x = TRUE,
       sort = FALSE
     )
@@ -137,10 +175,37 @@ proxiscout_read_data <- function(file, references_file) {
     # Sort by the order column and remove it
     x <- x[order(x$.order), ]
     x$.order <- NULL
-    x$clean_sample_id <- NULL
+
+    # Rows with no matching reference get NA in .repetition_group (and in all
+    # reference columns). Fall back to grouping by their own clean sample id instead.
+    unmatched <- is.na(x$.repetition_group)
+    if (any(unmatched)) {
+      next_group <- if (all(unmatched)) 0L else max(x$.repetition_group[!unmatched])
+      fallback_group <- match(x$.clean_sample_id[unmatched], unique(x$.clean_sample_id[unmatched]))
+      x$.repetition_group[unmatched] <- next_group + fallback_group
+    }
+    x$.clean_sample_id <- NULL
     rownames(x) <- seq_len(nrow(x))
+  } else {
+    # Attach column .repetition_group to x
+    x[[".repetition_group"]] <- seq_len(nrow(x))
+    # If only a single file is given, we check for a column for the sample name
+    # This column should indicate whether there are repetitions in the data
+    if (any(grepl(id_regex, colnames(x), ignore.case = TRUE))) {
+      wh_id <- grep(id_regex, colnames(x), ignore.case = TRUE)
+      id_col <- x[[wh_id[1]]]
+      # If the data exhibits a repetition pattern, modify the repetition group column
+      if (any(grepl(proxiscout_repetition_pattern(), id_col, ignore.case = TRUE))) {
+        group_key <- gsub(proxiscout_repetition_pattern(), "", id_col)
+        # If there is a column for scanner or for the date, add them to the group key.
+        # These are typically different for measurements that are not repeats.
+        group_key <- add_regex_col(x, "^(scanner|device)[ _.-]?id$|^(scanner|device)[ _.-]?name$|^(scanner|device)$", group_key)
+        group_key <- add_regex_col(x, "^(capturedat|date)$", group_key)
+        x[[".repetition_group"]] <- match(group_key, unique(group_key))
+      }
+    }
   }
-  # ProxiScout data typically contains a column with "sample" in it
+  # Assign proxiscout class if the data originates from ProxiScout
   if (assign_class) {
     class(x) <- c("proxiscout_data", "data.frame")
   }
@@ -165,4 +230,27 @@ proxiscout_read_data <- function(file, references_file) {
 #' @export
 proxiscout_repetition_pattern <- function() {
   "_{1}[0-9]{1,3}$"
+}
+
+#' @title Add a column with the given regex to x if it exists
+#'
+#' @description
+#' Adds elements of column with the given regex from data to x if it exists.
+#'
+#' @usage
+#' add_regex_col(data, regex, x)
+#'
+#' @return x if the regex does not exists; or x pasted together with the first column
+#' of x whose column name is detected by the regex.
+#'
+#' @author Claudio Orellano
+#' @keywords internal
+add_regex_col <- function(data, regex, x) {
+  # Return x if the regex does not appear
+  if (!any(grepl(regex, colnames(data), ignore.case = TRUE))) return(x)
+  # Find the column where the regex appears
+  regex_col <- grep(regex, colnames(data), ignore.case = TRUE)
+  # Paste x with the first appearance of the regex column
+  paste0(x, data[[regex_col[1]]])
+  
 }
