@@ -2,11 +2,11 @@
 % Please edit documentation in R/proxiscout_write_model_info.R
 \name{zero_if_invalid}
 \alias{zero_if_invalid}
-\title{Returns 0 if `x` is not of length 1 or `is.finite(x)` returns `FALSE`}
+\title{Returns 0 if \code{x} is not of length 1 or \code{is.finite(x)} returns \code{FALSE}}
 \usage{
 zero_if_invalid(x)
 }
 \description{
-Returns 0 if `x` is not of length 1 or `is.finite(x)` returns `FALSE`
+Returns 0 if \code{x} is not of length 1 or \code{is.finite(x)} returns \code{FALSE}
 }
 \keyword{internal}

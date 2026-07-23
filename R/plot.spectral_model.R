@@ -334,6 +334,8 @@ plot.spectral_model <- function(
       "Install it from https://quarto.org/docs/get-started/"
     )
   }
+  # Check for scales package; required for the plots.
+  requireNamespace("scales", quietly = TRUE)
 
   if (is.null(output_dir)) output_dir <- tempdir()
   out_path <- file.path(output_dir, paste0(output_file, ".html"))

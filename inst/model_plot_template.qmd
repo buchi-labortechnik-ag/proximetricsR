@@ -41,10 +41,11 @@ final_model <- full_model$final_model
 
 wavelengths <- as.double(colnames(final_model$model$weights))
 n_observations <- final_model$model$n_observations
-xaxis_label <- switch(full_model$preprocess$device,
-                      proxiscout  = "Wavenumber (cm<sup>-1</sup>)",
-                      proximate   = "Wavelength (nm)",
-                      ""
+xaxis_label <- switch(
+  full_model$preprocess$device,
+  proxiscout  = "Wavenumber (cm<sup>-1</sup>)",
+  proximate   = "Wavelength (nm)",
+  ""
 )
 xaxis_spectral <- list(title = xaxis_label, titlefont = list(color = "#7f7f7f"))
 if (full_model$preprocess$device == "proxiscout") {
