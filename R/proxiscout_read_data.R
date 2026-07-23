@@ -20,7 +20,10 @@
 #'
 #' If two file paths are given, the files are assumed to contain the spectral
 #' data in \code{file}, while \code{references_file} contains only the reference values.
-#' Both files must share a column name, which respect to which the files are merged.
+#' Both files must share a column name with respect to which the files are merged.
+#' If no columns match, instead both files must have a column that match with the
+#' following regex: \code{"^id$|^sample[ _.-]?name$|^name$|^sample[ _.-]?id$"}.
+#' 
 #' Entries in these columns must coincide. If none of the entries do, potential
 #' repetition indicators are removed (see \code{\link{proxiscout_repetition_pattern}})
 #' before the merge.
@@ -251,6 +254,6 @@ add_regex_col <- function(data, regex, x) {
   # Find the column where the regex appears
   regex_col <- grep(regex, colnames(data), ignore.case = TRUE)
   # Paste x with the first appearance of the regex column
-  paste0(x, data[[regex_col[1]]])
+  paste(x, data[[regex_col[1]]], sep = "::")
   
 }

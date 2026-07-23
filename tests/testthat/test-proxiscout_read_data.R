@@ -154,6 +154,17 @@ write_spec_csv <- function(df) {
   path
 }
 
+test_that("single-file input: .repetition_group groups repeated sample ids", {
+  x_single <- data.frame(
+    SampleID = c("A_1", "A_2", "B"),
+    "3921" = c(50.1, 48.3, 47.0),
+    check.names = FALSE
+  )
+  result <- proxiscout_read_data(write_spec_csv(x_single))
+  expect_equal(result$.repetition_group[1], result$.repetition_group[2])
+  expect_false(result$.repetition_group[1] %in% result$.repetition_group[3])
+})
+
 test_that("two-file merge: happy path with shared id column", {
   x1 <- data.frame(
     SampleID = c("A", "B", "C"),
