@@ -22,6 +22,18 @@ A \code{data.frame} where:
 \item Multiple files are merged into a single \code{data.frame}.
 \item If the files contain 257 columns in \code{spc}, the data is assigned class
 \code{"proxiscout_data"}.
+\item A \code{.repetition_group} integer column is added, identifying rows that
+correspond to repeated scans of the same sample: for two-file input, rows
+merged to the same reference row share a group id; for single-file input,
+groups are derived from the sample ID column's repetition suffix (see
+\code{\link{proxiscout_repetition_pattern}}), optionally disambiguated by
+scanner/device and date columns when present. This column is meant for
+downstream aggregation of repeated measurements and is not guaranteed to be
+meaningful if no ID-like column is found in the input. For two-file input,
+rows in \code{file} with no matching sample in \code{references_file} have
+\code{NA} reference columns; \code{.repetition_group} is still assigned for
+these rows (grouped by their own sample id) so that their spectra can be
+aggregated even though no reference value is available.
 }
 }
 \description{
@@ -35,34 +47,40 @@ This function allows the user to give the path to one or two files at once.
 
 If two file paths are given, the files are assumed to contain the spectral
 data in \code{file}, while \code{references_file} contains only the reference values.
-Both files must have a column that contains the regex \code{sample},
-and the entries must coincide (excluding potential repetition identificators).
-These files are then merged together by the column with the name containing \code{sample}.
+Both files must share a column name with respect to which the files are merged.
+If no columns match, instead both files must have a column that match with the
+following regex: \code{"^id$|^sample[ _.-]?name$|^name$|^sample[ _.-]?id$"}.
+
+Entries in these columns must coincide. If none of the entries do, potential
+repetition indicators are removed (see \code{\link{proxiscout_repetition_pattern}})
+before the merge.
 
 If only \code{file} is given, it must contain the spectral columns, and may or may
 not contain reference values.
 
 In general, inside \code{file}, any column AFTER the spectra are identified as
-predictions, and are collected into a \code{matrix} called \code{predictions} (if any
-exist). Columns that contain numerical values and do not contain typical
+predictions, and are collected into a \code{matrix} called \code{predictions}
+(if any exist). Columns that contain numerical values and do not contain typical
 column names (see \code{\link{extract_property_names}} for more details)
 that appear BEFORE the spectral data columns are identified reference values.
 
 The function:
 \itemize{
 \item ensures the file extensions are valid (\code{.csv} or \code{.xlsx}).
-\item reads CSV files using \code{read.csv()} and Excel files using \code{readxl::read_excel()}.
+\item reads CSV files using \code{\link[utils]{read.csv}} and Excel files using
+\code{\link[readxl]{read_excel}}.
 \item extracts spectral data (columns with numeric names).
 \item if exactly 257 columns with numeric names are found, then:
 \itemize{
-\item the spectral matrix is assigned the typical proxiscout wavenumbers (\code{\link{get_proxiscout_wavenumbers}})
-\item the data is assigned class \code{"proxiscout_data"}
+\item the spectral matrix is assigned the typical proxiscout wavenumbers
+(\code{\link{get_proxiscout_wavenumbers}})
+\item the data is assigned class \code{"proxiscout_data"}.
 \item spectral matrix is converted from percentage (0 to 100) to absolute (0 to 1) units.
 }
 \item if the number of columns with numeric names is not 257, the spectral matrix is assigned the wavelengths/wavenumbers in the header of the file.
 \item stores the spectral data in a matrix named \code{spc}.
 \item stores columns after the spectral data in a matrix named \code{predictions} (if any exist).
-\item merges files together by the sample column if multiple files are given.
+\item merges files together by a common column if multiple files are given.
 }
 }
 \note{
