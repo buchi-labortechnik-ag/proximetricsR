@@ -7,9 +7,9 @@ status](https://www.r-pkg.org/badges/version/proximetricsR?v=2.png)](https://CRA
 
 ![proximetricsR logo](./reference/figures/logo.png)
 
-*Last update: 2026-07-19*
+*Last update: 2026-08-01*
 
-Version: 0.6.5 – Matterhorn2
+Version: 0.7.0 – Matterhorn2
 
 ## About
 
@@ -385,6 +385,9 @@ For questions, contact:
 
 - [`proxiscout_write_model()`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proxiscout_write_model.md)
   : Write a calibration model to ProxiScout JSON format
+
+- [`proxiscout_write_model_info()`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proxiscout_write_model_info.md)
+  : Write the model info into a JSON for ProxiScout devices
 
 - [`read_spc()`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/read_spc.md)
   : Read and format spectral data from a file

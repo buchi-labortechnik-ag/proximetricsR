@@ -689,9 +689,19 @@ obtained by:
 
 ``` r
 
-plot(optimized_app$final_models$`Protein ~ spc`, selection = "all")
+plot(
+  optimized_app$final_models$`Protein ~ spc`,  
+  spectral = "all", 
+  cv = "all", 
+  validation = "all"
+)
 # and
-plot(optimized_app$final_models$`Moisture ~ spc`, selection = "all")
+plot(
+  optimized_app$final_models$`Moisture ~ spc`,  
+  spectral = "all", 
+  cv = "all", 
+  validation = "all"
+)
 ```
 
 Applying the [`plot()`](https://rdrr.io/r/graphics/plot.default.html)
@@ -955,7 +965,12 @@ protein_model <- add_model_metadata(
   decimal_places = 2
 )
 
-plot(protein_model, selection = "all")
+plot(
+  protein_model,
+  spectral = "all", 
+  cv = "all", 
+  validation = "all"
+)
 ```
 
 The fitted model can also be used to make predictions on new data. Just

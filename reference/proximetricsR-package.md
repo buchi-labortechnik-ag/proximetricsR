@@ -5,7 +5,7 @@ devices.
 
 ## Details
 
-This is package version 0.6.5 (Matterhorn2).
+This is package version 0.7.0 (Matterhorn2).
 
 This package provides `R` functions for spectral pre-processing, NIR
 model calibration, and reading/writing files for BUCHI ProxiMate and
@@ -125,7 +125,9 @@ A typical example dataset for a ProxiMate device can be found in:
 
 Useful links:
 
-- <https://buchi-labortechnik-ag.github.io/proximetricsR/https://github.com/l-ramirez-lopez/proximetricsr>
+- <https://proximetricsr.r.packages.buchi-nir.io/>
+
+- <https://github.com/buchi-labortechnik-ag/proximetricsr/>
 
 - Report bugs at
   <https://github.com/buchi-labortechnik-ag/proximetricsr/issues>

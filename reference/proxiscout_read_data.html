@@ -15,7 +15,7 @@ column."><meta property="og:image" content="https://buchi-labortechnik-ag.github
 
     <a class="navbar-brand me-2" href="../index.html">proximetricsR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.6</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -84,33 +84,57 @@ a file containing reference values. See details.</p></dd>
 <li><p>Multiple files are merged into a single <code>data.frame</code>.</p></li>
 <li><p>If the files contain 257 columns in <code>spc</code>, the data is assigned class
 <code>"proxiscout_data"</code>.</p></li>
+<li><p>A <code>.repetition_group</code> integer column is added, identifying rows that
+correspond to repeated scans of the same sample: for two-file input, rows
+merged to the same reference row share a group id; for single-file input,
+groups are derived from the sample ID column's repetition suffix (see
+<code><a href="proxiscout_repetition_pattern.html">proxiscout_repetition_pattern</a></code>), optionally disambiguated by
+scanner/device and date columns when present. This column is meant for
+downstream aggregation of repeated measurements and is not guaranteed to be
+meaningful if no ID-like column is found in the input. For two-file input,
+rows in <code>file</code> with no matching sample in <code>references_file</code> have
+<code>NA</code> reference columns; <code>.repetition_group</code> is still assigned for
+these rows (grouped by their own sample id) so that their spectra can be
+aggregated even though no reference value is available.</p></li>
 </ul></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>This function allows the user to give the path to one or two files at once.</p>
 <p>If two file paths are given, the files are assumed to contain the spectral
 data in <code>file</code>, while <code>references_file</code> contains only the reference values.
-Both files must have a column that contains the regex <code>sample</code>,
-and the entries must coincide (excluding potential repetition identificators).
-These files are then merged together by the column with the name containing <code>sample</code>.</p>
+The column used to merge the files is chosen with the following priority:</p><ol><li><p>A column name shared by both files that also looks like a sample
+identifier, i.e. matches the regex <code>"^id$|^sample[ _.-]?name$|^name$|^sample[ _.-]?id$"</code>.</p></li>
+<li><p>If no shared column name matches that regex, but each file has its own
+ID-like column (possibly under different names), those columns are used
+instead - even if the files also share other, non-ID column names (e.g. a
+<code>Date</code> column). This avoids merging on an incidental shared column
+when a proper sample identifier is available.</p></li>
+<li><p>If neither file has an ID-like column, the first shared column name
+(of any kind) is used as a last resort.</p></li>
+<li><p>If none of the above apply, an error is thrown.</p></li>
+</ol><p>Entries in the chosen columns must coincide. If none of the entries do, potential
+repetition indicators are removed (see <code><a href="proxiscout_repetition_pattern.html">proxiscout_repetition_pattern</a></code>)
+before the merge.</p>
 <p>If only <code>file</code> is given, it must contain the spectral columns, and may or may
 not contain reference values.</p>
 <p>In general, inside <code>file</code>, any column AFTER the spectra are identified as
-predictions, and are collected into a <code>matrix</code> called <code>predictions</code> (if any
-exist). Columns that contain numerical values and do not contain typical
+predictions, and are collected into a <code>matrix</code> called <code>predictions</code>
+(if any exist). Columns that contain numerical values and do not contain typical
 column names (see <code><a href="extract_property_names.html">extract_property_names</a></code> for more details)
 that appear BEFORE the spectral data columns are identified reference values.</p>
 <p>The function:</p><ul><li><p>ensures the file extensions are valid (<code>.csv</code> or <code>.xlsx</code>).</p></li>
-<li><p>reads CSV files using <code><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv()</a></code> and Excel files using <code><a href="https://readxl.tidyverse.org/reference/read_excel.html" class="external-link">readxl::read_excel()</a></code>.</p></li>
+<li><p>reads CSV files using <code><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></code> and Excel files using
+<code><a href="https://readxl.tidyverse.org/reference/read_excel.html" class="external-link">read_excel</a></code>.</p></li>
 <li><p>extracts spectral data (columns with numeric names).</p></li>
-<li><p>if exactly 257 columns with numeric names are found, then:</p><ul><li><p>the spectral matrix is assigned the typical proxiscout wavenumbers (<code><a href="get_proxiscout_wavenumbers.html">get_proxiscout_wavenumbers</a></code>)</p></li>
-<li><p>the data is assigned class <code>"proxiscout_data"</code></p></li>
+<li><p>if exactly 257 columns with numeric names are found, then:</p><ul><li><p>the spectral matrix is assigned the typical proxiscout wavenumbers
+(<code><a href="get_proxiscout_wavenumbers.html">get_proxiscout_wavenumbers</a></code>)</p></li>
+<li><p>the data is assigned class <code>"proxiscout_data"</code>.</p></li>
 <li><p>spectral matrix is converted from percentage (0 to 100) to absolute (0 to 1) units.</p></li>
 </ul></li>
 <li><p>if the number of columns with numeric names is not 257, the spectral matrix is assigned the wavelengths/wavenumbers in the header of the file.</p></li>
 <li><p>stores the spectral data in a matrix named <code>spc</code>.</p></li>
 <li><p>stores columns after the spectral data in a matrix named <code>predictions</code> (if any exist).</p></li>
-<li><p>merges files together by the sample column if multiple files are given.</p></li>
+<li><p>merges files together by a common column if multiple files are given.</p></li>
 </ul></div>
     <div class="section level2">
     <h2 id="note">Note<a class="anchor" aria-label="anchor" href="#note"></a></h2>

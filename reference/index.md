@@ -120,6 +120,9 @@
 - [`proxiscout_write_model()`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proxiscout_write_model.md)
   : Write a calibration model to ProxiScout JSON format
 
+- [`proxiscout_write_model_info()`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proxiscout_write_model_info.md)
+  : Write the model info into a JSON for ProxiScout devices
+
 - [`read_spc()`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/read_spc.md)
   : Read and format spectral data from a file
 

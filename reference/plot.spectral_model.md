@@ -8,13 +8,18 @@ Quarto file "model_plot_template.qmd" for the given model `x` of class
 
 ``` r
 # S3 method for class 'spectral_model'
-plot(x, validations = NULL, output_file = x$target_variable,
+plot(
+  x,
+  validations = NULL,
+  output_file = x$target_variable,
   output_dir = NULL,
   spectral = c("weights", "coefficients", "scores", "mahalanobis"),
   cv = c("error", "response", "residuals", "qq", "distributions"),
   regression = NULL,
   validation = if (!is.null(validations)) "all" else NULL,
-  verbose = TRUE, open_file = TRUE, ...)
+  sample_group = NULL,
+  verbose = TRUE, open_file = TRUE, ...
+ )
 ```
 
 ## Arguments
@@ -73,6 +78,13 @@ plot(x, validations = NULL, output_file = x$target_variable,
   every validation plot, or `NULL` to skip. Available names:
   `"predicted_vs_reference"`. Defaults to `"all"` when `validations` is
   supplied, `NULL` otherwise.
+
+- sample_group:
+
+  a named list of samples that should have the same color. See details.
+  Default is `NULL`, meaning no grouping is done. Note that this is only
+  to distinguish samples for the plots; the model itself remains
+  unchanged.
 
 - verbose:
 
@@ -235,6 +247,20 @@ considered component. The sliders start at the optimal components (if
 any calibration control was applied) or at the maximum number of
 components (otherwise).
 
+**Sample groups**
+
+The parameter `sample_group` defines samples that belong to the same
+group and should be displayed with the same color. The legend displays
+each group by the name given in the list (and an "Other" group for
+samples not listed).
+
+The idea of this parameter is to allow the user to distinguish e.g.
+between different instruments. Each sample must belong to a single
+group, otherwise, this argument is ignored. Indices refer to the sample
+indices in the calibration statistics in the model.
+
+**Additional parameters for graphics**
+
 The plots are constructed with the help of the plotly package. As such,
 the possibilities to manipulate the plots are as in that package. The
 arrangement of the plots is controlled by the quarto package.
@@ -299,7 +325,7 @@ plot(my_model, output_dir = tempdir())
 #> 
 #> Use "all" to include every plot in a section, NULL to skip. See ?plot.spectral_model
 #> 
-#> Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >>                               Output created: /tmp/RtmpKFpgSu/CBDA.html 
+#> Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>                              Output created: /tmp/RtmprFZfDQ/CBDA.html 
 # Include every available plot in every section
 plot(my_model,
   output_dir = tempdir(),
@@ -326,15 +352,20 @@ plot(my_model,
 #> 
 #> Use "all" to include every plot in a section, NULL to skip. See ?plot.spectral_model
 #> 
-#> Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html >                               Output created: /tmp/RtmpKFpgSu/CBDA.html 
-# Custom section selection
+#> Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html                                Output created: /tmp/RtmprFZfDQ/CBDA.html 
+# Custom section selection with sample grouping
 plot(
   my_model,
   output_file = "example_plot",
   output_dir = tempdir(),
   spectral = c("weights", "scores"),
   cv = "all",
-  regression = NULL
+  regression = NULL,
+  sample_group = list(
+    "Batch A" = 1:20,
+    "Batch B" = 21:60,
+    "Batch C" = 61:80
+  )
 )
 #> Available plot parameter options:
 #> ---
@@ -357,7 +388,7 @@ plot(
 #> 
 #> Use "all" to include every plot in a section, NULL to skip. See ?plot.spectral_model
 #> 
-#> Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html                                Output created: /tmp/RtmpKFpgSu/example_plot.html 
+#> Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html                                Output created: /tmp/RtmprFZfDQ/example_plot.html 
 # Make predictions and validate
 preds <- predict(my_model, NIRcannabis[skips, ])
 #> Processing 'newdata':  resample > snv > derivative 
@@ -395,6 +426,6 @@ plot(
 #> 
 #> Use "all" to include every plot in a section, NULL to skip. See ?plot.spectral_model
 #> 
-#> Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html                                Output created: /tmp/RtmpKFpgSu/example_plot.html 
+#> Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html > Generating plots in html >> Generating plots in html >>>Generating plots in html  Generating plots in html >                               Output created: /tmp/RtmprFZfDQ/example_plot.html 
 # }
 ```
