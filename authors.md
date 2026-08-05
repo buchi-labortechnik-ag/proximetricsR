@@ -20,7 +20,7 @@
 ## Citation
 
 Source:
-[`inst/CITATION`](https://github.com/buchi-labortechnik-ag/proximetricsr/blob/v0.7.0/inst/CITATION)
+[`inst/CITATION`](https://github.com/buchi-labortechnik-ag/proximetricsr/blob/main/inst/CITATION)
 
 Ramirez-Lopez, L., Orellano, C., Cudlenco, N., Said, M., and Abushosha,
 M. (2026). proximetricsR: Spectral Preprocessing and Calibration for NIR

@@ -42,7 +42,7 @@ Install the development version from GitHub:
 ``` r
 
 # install.packages("remotes")
-remotes::install_github("l-ramirez-lopez/proximetricsr")
+remotes::install_github("buchi-labortechnik-ag/proximetricsr")
 ```
 
 Requires R ≥ 4.2.0 and compilation tools (C++ via Rcpp and
