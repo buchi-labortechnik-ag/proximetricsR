@@ -7,9 +7,9 @@ status](https://www.r-pkg.org/badges/version/proximetricsR?v=2.png)](https://CRA
 
 ![proximetricsR logo](./reference/figures/logo.png)
 
-*Last update: 2026-08-01*
+*Last update: 2026-08-14*
 
-Version: 0.7.0 – Matterhorn2
+Version: 0.7.1 – Valinhos
 
 ## About
 

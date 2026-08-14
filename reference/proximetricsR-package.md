@@ -5,7 +5,7 @@ devices.
 
 ## Details
 
-This is package version 0.7.0 (Matterhorn2).
+This is package version 0.7.1 (Valinhos).
 
 This package provides `R` functions for spectral pre-processing, NIR
 model calibration, and reading/writing files for BUCHI ProxiMate and

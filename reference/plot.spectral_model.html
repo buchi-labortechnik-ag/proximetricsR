@@ -17,7 +17,7 @@ spectral_model.'><meta property="og:image" content="https://buchi-labortechnik-a
 
     <a class="navbar-brand me-2" href="../index.html">proximetricsR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -73,6 +73,7 @@ Quarto file "model_plot_template.qmd" for the given model <code>x</code> of clas
 <span>  regression <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  validation <span class="op">=</span> <span class="kw">if</span> <span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="va">validations</span><span class="op">)</span><span class="op">)</span> <span class="st">"all"</span> <span class="kw">else</span> <span class="cn">NULL</span>,</span>
 <span>  sample_group <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  validation_group <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">TRUE</span>, open_file <span class="op">=</span> <span class="cn">TRUE</span>, <span class="va">...</span></span>
 <span> <span class="op">)</span></span></code></pre></div>
     </div>
@@ -131,14 +132,22 @@ skip the section entirely. Available names:
 <dt id="arg-validation">validation<a class="anchor" aria-label="anchor" href="#arg-validation"></a></dt>
 <dd><p>a character vector of validation plots to include,
 <code>"all"</code> to include every validation plot, or <code>NULL</code> to skip.
-Available names: <code>"predicted_vs_reference"</code>. Defaults to <code>"all"</code>
-when <code>validations</code> is supplied, <code>NULL</code> otherwise.</p></dd>
+Available names: <code>"predicted_vs_reference"</code>, <code>"leverage_vs_residual"</code>.
+Defaults to <code>"all"</code> when <code>validations</code> is supplied, <code>NULL</code> otherwise.</p></dd>
 
 
 <dt id="arg-sample-group">sample_group<a class="anchor" aria-label="anchor" href="#arg-sample-group"></a></dt>
 <dd><p>a named list of samples that should have the same color.
 See details. Default is <code>NULL</code>, meaning no grouping is done. Note that this
 is only to distinguish samples for the plots; the model itself remains unchanged.</p></dd>
+
+
+<dt id="arg-validation-group">validation_group<a class="anchor" aria-label="anchor" href="#arg-validation-group"></a></dt>
+<dd><p>a named list of validation samples that should have the
+same color, analogous to <code>sample_group</code> but for the plots in the
+<code>validation</code> section. Indices refer to the position of each sample within
+the validation set (as returned by <code><a href="validate_prediction.html">validate_prediction</a></code>), not to
+calibration sample indices. Default is <code>NULL</code>, meaning no grouping is done.</p></dd>
 
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
@@ -251,6 +260,13 @@ linear regression model. Additionally, the <em></em>\(R^2\) and <code>RMSE</code
 of both the validated predictions and model is depicted. See
 <code><a href="validate_prediction.html">validate_prediction</a></code> and <code><a href="calibrate.html">predict</a></code> for more details on the
 prediction and validation process.</p></li>
+<li><p><strong>Leverage vs. Spectral Residual*</strong>: A points plot of the
+Mahalanobis distance (leverage) of each validated sample against its
+spectral (X-space) residual, normalized by the calibration set's own
+average residual for the same number of components. Not to be confused
+with the <strong>Leverage vs Residuals</strong> plot in the <code>regression</code>
+section, which uses the classical (univariate) leverage of the fitted
+response instead.</p></li>
 </ul><p>Most of above plots contain a slider, which may be used to adjust the considered
 component. The sliders start at the optimal components (if any calibration
 control was applied) or at the maximum number of components (otherwise).</p>
@@ -262,6 +278,10 @@ the name given in the list (and an "Other" group for samples not listed).</p>
 different instruments. Each sample must belong to a single group, otherwise,
 this argument is ignored. Indices refer to the sample indices in the calibration
 statistics in the model.</p>
+<p>The parameter <code>validation_group</code> works analogously, but for the plots in
+the <code>validation</code> section. Since validation samples are not part of the
+calibration set, indices instead refer to the position of a sample within the
+validation set (as returned by <code><a href="validate_prediction.html">validate_prediction</a></code>).</p>
 <p><strong>Additional parameters for graphics</strong></p>
 <p>The plots are constructed with the help of the plotly package. As such,
 the possibilities to manipulate the plots are as in that package.
@@ -319,11 +339,11 @@ plots ignore the ellipsis argument altogether.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  "scale_location", "leverage"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  )</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  validation = c("predicted_vs_reference")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  validation = c("predicted_vs_reference", "leverage_vs_residual")</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Use "all" to include every plot in a section, NULL to skip. See ?plot.spectral_model</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt;                               Output created: /tmp/RtmpaZDKy2/CBDA.html </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt;                               Output created: /tmp/Rtmp9duVIm/CBDA.html </span>
 <span class="r-in"><span><span class="co"># Include every available plot in every section</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">my_model</span>,</span></span>
 <span class="r-in"><span>  output_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span></span>
@@ -346,11 +366,11 @@ plots ignore the ellipsis argument altogether.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  "scale_location", "leverage"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  )</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  validation = c("predicted_vs_reference")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  validation = c("predicted_vs_reference", "leverage_vs_residual")</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Use "all" to include every plot in a section, NULL to skip. See ?plot.spectral_model</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;                              Output created: /tmp/RtmpaZDKy2/CBDA.html </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;                              Output created: /tmp/Rtmp9duVIm/CBDA.html </span>
 <span class="r-in"><span><span class="co"># Custom section selection with sample grouping</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">my_model</span>,</span></span>
@@ -382,18 +402,20 @@ plots ignore the ellipsis argument altogether.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  "scale_location", "leverage"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  )</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  validation = c("predicted_vs_reference")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  validation = c("predicted_vs_reference", "leverage_vs_residual")</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Use "all" to include every plot in a section, NULL to skip. See ?plot.spectral_model</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt;                               Output created: /tmp/RtmpaZDKy2/example_plot.html </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt;                               Output created: /tmp/Rtmp9duVIm/example_plot.html </span>
 <span class="r-in"><span><span class="co"># Make predictions and validate</span></span></span>
 <span class="r-in"><span><span class="va">preds</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">my_model</span>, <span class="va">NIRcannabis</span><span class="op">[</span><span class="va">skips</span>, <span class="op">]</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00; font-weight: bold; font-style: italic;">Processing 'newdata':  resample &gt; snv &gt; derivative </span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00; font-weight: bold; font-style: italic;">Predicting from preprocessed 'newdata'...</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="va">validations</span> <span class="op">&lt;-</span> <span class="fu"><a href="validate_prediction.html">validate_prediction</a></span><span class="op">(</span><span class="va">preds</span>, <span class="va">NIRcannabis</span><span class="op">$</span><span class="va">CBDA</span><span class="op">[</span><span class="va">skips</span><span class="op">]</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="co"># Plot validation section only</span></span></span>
+<span class="r-in"><span><span class="co"># Plot validation section only, grouping validation samples by instrument.</span></span></span>
+<span class="r-in"><span><span class="co"># Indices in validation_group refer to the position of a sample within the</span></span></span>
+<span class="r-in"><span><span class="co"># validation set (i.e. within 'skips'), not to calibration sample indices.</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">my_model</span>,</span></span>
 <span class="r-in"><span>  output_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>,</span></span>
@@ -401,7 +423,11 @@ plots ignore the ellipsis argument altogether.</p>
 <span class="r-in"><span>  validations <span class="op">=</span> <span class="va">validations</span>,</span></span>
 <span class="r-in"><span>  spectral <span class="op">=</span> <span class="cn">NULL</span>,</span></span>
 <span class="r-in"><span>  cv <span class="op">=</span> <span class="cn">NULL</span>,</span></span>
-<span class="r-in"><span>  regression <span class="op">=</span> <span class="cn">NULL</span></span></span>
+<span class="r-in"><span>  regression <span class="op">=</span> <span class="cn">NULL</span>,</span></span>
+<span class="r-in"><span>  validation_group <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    <span class="st">"Instrument A"</span> <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">2</span>, <span class="co"># rows 5 and 13 of NIRcannabis (skips[1:2])</span></span></span>
+<span class="r-in"><span>    <span class="st">"Instrument B"</span> <span class="op">=</span> <span class="fl">3</span><span class="op">:</span><span class="fl">4</span> <span class="co"># rows 21 and 73 of NIRcannabis (skips[3:4])</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Available plot parameter options:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---</span>
@@ -420,11 +446,11 @@ plots ignore the ellipsis argument altogether.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  "scale_location", "leverage"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  )</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ---</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  validation = c("predicted_vs_reference")</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  validation = c("predicted_vs_reference", "leverage_vs_residual")</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Use "all" to include every plot in a section, NULL to skip. See ?plot.spectral_model</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html                                Output created: /tmp/RtmpaZDKy2/example_plot.html </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt; Generating plots in html &gt;&gt;&gt;Generating plots in html  Generating plots in html &gt; Generating plots in html &gt;&gt;                               Output created: /tmp/Rtmp9duVIm/example_plot.html </span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
