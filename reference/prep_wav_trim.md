@@ -1,7 +1,8 @@
-# Wavelength trimming constructor for spectral preprocessing
+# Wavelength or wavenumber trimming constructor for spectral preprocessing
 
 Creates a preprocessing constructor for trimming spectral data to a
-specified wavelength band. The constructor is intended to be passed to
+specified wavelength/wavenumber band. The constructor is intended to be
+passed to
 [`preprocess_recipe`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/preprocess_recipe.md)
 and executed via
 [`process`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/preprocess_recipe.md).
@@ -46,6 +47,12 @@ Constant edge trimming scans inward from each edge and drops columns
 that are identical to their immediate neighbour or are all zero. If
 trimming would leave fewer than two columns the step is skipped with a
 warning.
+
+Because constant edge trimming depends on the data values, it is
+resolved to the exact set of wavelengths/wavenumbers retained on the
+training data when the step is used in
+[`calibrate`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/calibrate.md),
+so that predictions trim `newdata` to exactly the same columns.
 
 ## See also
 

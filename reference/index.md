@@ -63,7 +63,8 @@
   preprocessing
 
 - [`prep_wav_trim()`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/prep_wav_trim.md)
-  : Wavelength trimming constructor for spectral preprocessing
+  : Wavelength or wavenumber trimming constructor for spectral
+  preprocessing
 
 - [`preprocess_recipe()`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/preprocess_recipe.md)
   [`process()`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/preprocess_recipe.md)
