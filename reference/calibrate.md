@@ -29,7 +29,7 @@ calibrate(X, Y, data = NULL, group = NULL,
           ...)
 
 # S3 method for class 'spectral_model'
-predict(object, newdata, ncomp = object$final_ncomp, verbose = TRUE, ...)
+predict(object, newdata, ncomp = object$final_ncomp, verbose = TRUE, control_limit_conf = 0.99, ...)
 ```
 
 ## Arguments
@@ -140,6 +140,12 @@ predict(object, newdata, ncomp = object$final_ncomp, verbose = TRUE, ...)
   a vector for the number of components to be used in the prediction.
   Default is `object$final_ncomp` i.e. the optimized number of
   components found in the object passed to `predict`.
+
+- control_limit_conf:
+
+  the confidence level for the leverage and spectral residual (Q)
+  control limits returned with the prediction and used by the validation
+  plot. A single number strictly between 0 and 1. Default is `0.99`.
 
 - na_action:
 
@@ -299,6 +305,17 @@ following elements:
 - **`scores`**: A matrix with the projected new data onto the score
   space of the provided model. Contains the scores of all possible
   number of components.
+
+- **`q_limit`**: A named vector (one value per requested component) with
+  the upper control limit for the spectral residual Q, taken as the
+  calibration quantile at `control_limit_conf`.
+
+- **`leverage_limit`**: A named vector (one value per requested
+  component) with the upper control limit for the leverage (Mahalanobis
+  distance) of a new observation at `control_limit_conf`.
+
+- **`control_limit_conf`**: The confidence level of `q_limit` and
+  `leverage_limit`.
 
 - **`model_information`**: A list, containing information on the model
   input of `object`:

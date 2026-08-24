@@ -83,7 +83,7 @@ software.</p>
 <span>          <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'spectral_model'</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">object</span>, <span class="va">newdata</span>, ncomp <span class="op">=</span> <span class="va">object</span><span class="op">$</span><span class="va">final_ncomp</span>, verbose <span class="op">=</span> <span class="cn">TRUE</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">object</span>, <span class="va">newdata</span>, ncomp <span class="op">=</span> <span class="va">object</span><span class="op">$</span><span class="va">final_ncomp</span>, verbose <span class="op">=</span> <span class="cn">TRUE</span>, control_limit_conf <span class="op">=</span> <span class="fl">0.99</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -187,6 +187,13 @@ a matrix of spectra.</p></dd>
 <dd><p>a vector for the number of components to be used in the prediction.
 Default is <code>object$final_ncomp</code> i.e. the optimized number of components
 found in the object passed to <code>predict</code>.</p></dd>
+
+
+<dt id="arg-control-limit-conf">control_limit_conf<a class="anchor" aria-label="anchor" href="#arg-control-limit-conf"></a></dt>
+<dd><p>the confidence level for the leverage and spectral
+residual (Q) control limits returned with the prediction and used by the
+validation plot. A single number strictly between 0 and 1. Default is
+<code>0.99</code>.</p></dd>
 
 
 <dt id="arg-na-action">na_action<a class="anchor" aria-label="anchor" href="#arg-na-action"></a></dt>
@@ -308,6 +315,14 @@ requested number of components (<code>ncomp</code>).</p></li>
 <li><p><strong><code>scores</code></strong>: A matrix with the projected new data onto the
 score space of the provided model. Contains the scores of all possible
 number of components.</p></li>
+<li><p><strong><code>q_limit</code></strong>: A named vector (one value per requested
+component) with the upper control limit for the spectral residual Q, taken
+as the calibration quantile at <code>control_limit_conf</code>.</p></li>
+<li><p><strong><code>leverage_limit</code></strong>: A named vector (one value per
+requested component) with the upper control limit for the leverage
+(Mahalanobis distance) of a new observation at <code>control_limit_conf</code>.</p></li>
+<li><p><strong><code>control_limit_conf</code></strong>: The confidence level of
+<code>q_limit</code> and <code>leverage_limit</code>.</p></li>
 <li><p><strong><code>model_information</code></strong>: A list, containing information on the
 model input of <code>object</code>:</p><ul><li><p><strong><code>target_var</code></strong>: A character, indicating the name of the
 target variable.</p></li>

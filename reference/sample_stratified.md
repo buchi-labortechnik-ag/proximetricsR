@@ -22,7 +22,7 @@ sample_stratified(y, p, number, group = NULL, replacement = FALSE, seed = NULL)
 - p:
 
   the percentage of samples (or groups if group argument is used) to
-  retain in the validation_indices set
+  retain in the calibration_indices set
 
 - number:
 
