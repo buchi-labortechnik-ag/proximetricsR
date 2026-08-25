@@ -1,10 +1,10 @@
 # Write data files for ProxiScout devices
 
 This function writes comma-separated files in a format compatible with
-ProxiScout-related software, which typically require two separate
-comma-separated files - one file for the spectra, and another file for
-reference values. These files are created inside the specified directory
-(argument `path`).
+ProxiScout-related software, which typically require separate
+comma-separated files - one file for the spectra, another for reference
+values, and a third one holding all remaining metadata columns. These
+files are created inside the specified directory (argument `path`).
 
 ## Usage
 
@@ -28,8 +28,8 @@ proxiscout_write_data(x, path, file_prefix, properties = NULL, spc = "spc")
 - file_prefix:
 
   a character for the prefix of the generated files. The files are then
-  named as `[file_prefix]_spectra.csv` and
-  `[file_prefix]_properties.csv`. Default is `proxiscout_export`.
+  named as `[file_prefix]_spectra.csv`, `[file_prefix]_properties.csv`
+  and `[file_prefix]_metadata.csv`. Default is `proxiscout_export`.
 
 - properties:
 
@@ -47,11 +47,12 @@ A `character` with the paths to the created files.
 
 ## Details
 
-This function creates up to two comma separated files in the directory
+This function creates up to three comma separated files in the directory
 `path`, which are usable by ProxiScout-related software. These files are
 named according to the `file_prefix` argument and contain the spectra
 together with the sample names and device ID, respectively the reference
-values with the sample names.
+values with the sample names, and a metadata file with the sample names
+and all remaining columns.
 
 Typically, the data provided to this function is imported with
 [`proxiscout_read_data`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proxiscout_read_data.md)
@@ -67,18 +68,21 @@ values are dropped. In general, `NA` values are set to an empty string
 
 The sample names are detected automatically from `x` as the column with
 a name that contains `"sample"`. If none are detected, the function will
-throw an error. This column will be named `"Sample Name"` in the
-`[file_prefix]_spectra.csv` file, and `"sampleName"` in the
-`[file_prefix]_properties.csv` file.
+throw an error. This column is named `"sampleName"` in every file.
 
 Similarly, the device ID is a required column and is identified as
 having a `"device"` string inside the name of the column. This column is
 only written into the `[file_prefix]_spectra.csv` file, with a fixed
-named `"Device Id"`.
+name `"deviceId"`.
 
 All other columns in either file only correspond to the spectra
-respectively the reference values. In particular, other columns in `x`
-are dropped.
+respectively the reference values. All columns in `x` that are not
+written to any of the other files - i.e. that are neither the spectra,
+the sample name, the device id nor the selected `properties` - are
+written to the `[file_prefix]_metadata.csv` file, together with the
+sample names (as `"sampleName"`). As with the properties file, this
+metadata file is only created when there is at least one such column,
+otherwise it would only contain the sample names.
 
 ## Author
 
