@@ -124,7 +124,9 @@ column names (see <code><a href="extract_property_names.html">extract_property_n
 that appear BEFORE the spectral data columns are identified reference values.</p>
 <p>The function:</p><ul><li><p>ensures the file extensions are valid (<code>.csv</code> or <code>.xlsx</code>).</p></li>
 <li><p>reads CSV files using <code><a href="https://rdrr.io/r/utils/read.table.html" class="external-link">read.csv</a></code> and Excel files using
-<code><a href="https://readxl.tidyverse.org/reference/read_excel.html" class="external-link">read_excel</a></code>.</p></li>
+<code><a href="https://readxl.tidyverse.org/reference/read_excel.html" class="external-link">read_excel</a></code>. In both cases the strings <code>""</code>,
+<code>"-"</code> and <code>"NA"</code> are interpreted as missing values (<code>NA</code>), so
+that numeric columns using these as placeholders are read as numeric.</p></li>
 <li><p>extracts spectral data (columns with numeric names).</p></li>
 <li><p>if exactly 257 columns with numeric names are found, then:</p><ul><li><p>the spectral matrix is assigned the typical proxiscout wavenumbers
 (<code><a href="get_proxiscout_wavenumbers.html">get_proxiscout_wavenumbers</a></code>)</p></li>

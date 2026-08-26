@@ -103,6 +103,9 @@ The function:
   [`read.csv`](https://rdrr.io/r/utils/read.table.html) and Excel files
   using
   [`read_excel`](https://readxl.tidyverse.org/reference/read_excel.html).
+  In both cases the strings `""`, `"-"` and `"NA"` are interpreted as
+  missing values (`NA`), so that numeric columns using these as
+  placeholders are read as numeric.
 
 - extracts spectral data (columns with numeric names).
 

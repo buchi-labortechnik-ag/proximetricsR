@@ -82,5 +82,8 @@ matched by any of the following, case-insensitive regex (each wrapped by
 
 - `predictions`
 
+- `.repetition_group` (internal column added by
+  [`proxiscout_read_data`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proxiscout_read_data.md))
+
 If `x` is of neither class, all columns with numerical values are
 considered to be properties
