@@ -7,7 +7,7 @@ status](https://www.r-pkg.org/badges/version/proximetricsR?v=2.png)](https://CRA
 
 ![proximetricsR logo](./reference/figures/logo.png)
 
-*Last update: 2026-08-14*
+*Last update: 2026-08-26*
 
 Version: 0.7.1 – Valinhos
 
@@ -54,7 +54,7 @@ RcppArmadillo).
 
 library(proximetricsR)
 
-data("NIRcannabis")
+data("proximateCannabis")
 # the list of formulas for the models to be built
 app_formulas <- list(THC ~ spc, THCA ~ spc, CBD ~ spc, CBDA ~ spc)
 
@@ -76,7 +76,7 @@ precipes <- list(
 
 optimized_app <- calibrate_models(
   formulas = app_formulas,
-  data = NIRcannabis,
+  data = proximateCannabis,
   preprocess_recipes = precipes,
   methods = list(fit_plsr(15, type = "nwp")),
   return_inputs = TRUE,
@@ -268,9 +268,6 @@ For questions, contact:
 
 ## All functions
 
-- [`NIRcannabis`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/NIRcannabis.md)
-  : NIRcannabis
-
 - [`add_application_metadata()`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/add_application_metadata.md)
   :
 
@@ -336,6 +333,9 @@ For questions, contact:
   [`process()`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/preprocess_recipe.md)
   : Build and execute spectral preprocessing recipes
 
+- [`proximateCannabis`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proximateCannabis.md)
+  : proximateCannabis
+
 - [`proximate_add2nax()`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proximate_add2nax.md)
   : Prepare data for augmenting a nax application
 
@@ -374,6 +374,9 @@ For questions, contact:
 - [`proximetricsR-package`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proximetricsR-package.md)
   [`proximetricsR`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proximetricsR-package.md)
   : Overview of the proximetricsR package
+
+- [`proxiscoutCannabis`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proxiscoutCannabis.md)
+  : proxiscoutCannabis
 
 - [`proxiscout_read_data()`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proxiscout_read_data.md)
   : Read and parse ProxiScout data from CSV or XLSX files

@@ -66,8 +66,8 @@ Claudio Orellano and Leonardo Ramirez-Lopez
 ## Examples
 
 ``` r
-data("NIRcannabis")
-X <- NIRcannabis$spc
+data("proximateCannabis")
+X <- proximateCannabis$spc
 
 tr <- prep_wav_trim(band = c(1000, 1800))
 recipe <- preprocess_recipe(tr, device = "proxiscout")

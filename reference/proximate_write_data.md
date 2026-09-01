@@ -116,25 +116,25 @@ Leonardo Ramirez-Lopez
 
 ``` r
 # \donttest{
-data("NIRcannabis")
-filename <- file.path(tempdir(), "NIRcannabis.tsv")
+data("proximateCannabis")
+filename <- file.path(tempdir(), "proximateCannabis.tsv")
 
 proximate_write_data(
-  x = NIRcannabis,
+  x = proximateCannabis,
   file = filename,
-  id = NIRcannabis$ID,
+  id = proximateCannabis$ID,
   spc = "spc",
   spc_round = 8,
-  barcode = NIRcannabis$Barcode,
+  barcode = proximateCannabis$Barcode,
   properties = c("CBDA", "THCA", "CBD", "THC"),
-  note = NIRcannabis$Note,
-  recipe = NIRcannabis$Recipe,
-  created = NIRcannabis$Begin
+  note = proximateCannabis$Note,
+  recipe = proximateCannabis$Recipe,
+  created = proximateCannabis$Begin
 )
 
 # Since we do not change anything, the following produces the same tsv:
 proximate_write_data(
-  x = NIRcannabis,
+  x = proximateCannabis,
   file = filename,
   properties = c("CBDA", "THCA", "CBD", "THC")
 )

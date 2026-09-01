@@ -269,7 +269,7 @@ Note that progress bars are suppressed during parallel execution.</p>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="st">"NIRcannabis"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="st">"proximateCannabis"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="co"># the list of formulas for the models to be built</span></span></span>
 <span class="r-in"><span><span class="va">app_formulas</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">THC</span> <span class="op">~</span> <span class="va">spc</span>, <span class="va">THCA</span> <span class="op">~</span> <span class="va">spc</span>, <span class="va">CBD</span> <span class="op">~</span> <span class="va">spc</span>, <span class="va">CBDA</span> <span class="op">~</span> <span class="va">spc</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
@@ -291,7 +291,7 @@ Note that progress bars are suppressed during parallel execution.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">optimized_app</span> <span class="op">&lt;-</span> <span class="fu">calibrate_models</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  formulas <span class="op">=</span> <span class="va">app_formulas</span>,</span></span>
-<span class="r-in"><span>  data <span class="op">=</span> <span class="va">NIRcannabis</span>,</span></span>
+<span class="r-in"><span>  data <span class="op">=</span> <span class="va">proximateCannabis</span>,</span></span>
 <span class="r-in"><span>  preprocess_recipes <span class="op">=</span> <span class="va">precipes</span>,</span></span>
 <span class="r-in"><span>  methods <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="fit_constructors.html">fit_plsr</a></span><span class="op">(</span><span class="fl">15</span>, type <span class="op">=</span> <span class="st">"nwp"</span><span class="op">)</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  return_inputs <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>

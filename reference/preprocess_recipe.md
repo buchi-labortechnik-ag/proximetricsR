@@ -93,8 +93,8 @@ Leonardo Ramirez-Lopez
 ## Examples
 
 ``` r
-data("NIRcannabis")
-X <- NIRcannabis$spc
+data("proximateCannabis")
+X <- proximateCannabis$spc
 
 # SNV alone — no device needed (SNV is device-agnostic)
 recipe_snv <- preprocess_recipe(prep_snv())

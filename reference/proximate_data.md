@@ -160,10 +160,10 @@ Claudio Orellano
 ## Examples
 
 ``` r
-data("NIRcannabis")
-dat <- NIRcannabis
+data("proximateCannabis")
+dat <- proximateCannabis
 
-# Reconstruct NIRcannabis with properties in a different order
+# Reconstruct proximateCannabis with properties in a different order
 spc <- dat$spc
 properties <- matrix(
   c(dat$CBD, dat$CBDA, dat$THC, dat$THCA),
@@ -209,7 +209,7 @@ wavs <- c(vis_wavs, nir_wavs)
 # Above coefficients now have to be passed to the proximate_data()
 # function since there are non-constant wavelengths.
 
-# If we (wrongly) assume that NIRcannabis has such wavelengths:
+# If we (wrongly) assume that proximateCannabis has such wavelengths:
 rand_mat <- matrix(rnorm((length(wavs) - ncol(spc)) * nrow(spc)), nrow = nrow(spc))
 spc <- cbind(rand_mat, spc)
 colnames(spc) <- wavs

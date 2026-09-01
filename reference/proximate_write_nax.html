@@ -197,12 +197,12 @@ present files are not deleted.</p>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="st">"NIRcannabis"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="st">"proximateCannabis"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">control</span> <span class="op">&lt;-</span> <span class="fu"><a href="calibration_control.html">calibration_control</a></span><span class="op">(</span>validation_type <span class="op">=</span> <span class="st">"kfold"</span>, number <span class="op">=</span> <span class="fl">3</span>, folds <span class="op">=</span> <span class="st">"sequential"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="co"># Models for application files must have model metadata!</span></span></span>
 <span class="r-in"><span><span class="va">model_metadata</span> <span class="op">&lt;-</span> <span class="fu"><a href="add_model_metadata.html">add_model_metadata</a></span><span class="op">(</span>unit <span class="op">=</span> <span class="st">"%"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">modell</span> <span class="op">&lt;-</span> <span class="fu"><a href="calibrate.html">calibrate</a></span><span class="op">(</span><span class="va">CBDA</span> <span class="op">~</span> <span class="va">spc</span>,</span></span>
-<span class="r-in"><span>  data <span class="op">=</span> <span class="va">NIRcannabis</span>, preprocess <span class="op">=</span> <span class="fu"><a href="preprocess_recipe.html">preprocess_recipe</a></span><span class="op">(</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  data <span class="op">=</span> <span class="va">proximateCannabis</span>, preprocess <span class="op">=</span> <span class="fu"><a href="preprocess_recipe.html">preprocess_recipe</a></span><span class="op">(</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  method <span class="op">=</span> <span class="fu"><a href="fit_constructors.html">fit_plsr</a></span><span class="op">(</span><span class="fl">15</span><span class="op">)</span>, control <span class="op">=</span> <span class="va">control</span>,</span></span>
 <span class="r-in"><span>  metadata <span class="op">=</span> <span class="va">model_metadata</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
@@ -220,7 +220,7 @@ present files are not deleted.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Another model</span></span></span>
 <span class="r-in"><span><span class="va">modelr</span> <span class="op">&lt;-</span> <span class="fu"><a href="calibrate.html">calibrate</a></span><span class="op">(</span><span class="va">THCA</span> <span class="op">~</span> <span class="va">spc</span>,</span></span>
-<span class="r-in"><span>  data <span class="op">=</span> <span class="va">NIRcannabis</span>, preprocess <span class="op">=</span> <span class="fu"><a href="preprocess_recipe.html">preprocess_recipe</a></span><span class="op">(</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  data <span class="op">=</span> <span class="va">proximateCannabis</span>, preprocess <span class="op">=</span> <span class="fu"><a href="preprocess_recipe.html">preprocess_recipe</a></span><span class="op">(</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  method <span class="op">=</span> <span class="fu"><a href="fit_constructors.html">fit_plsr</a></span><span class="op">(</span><span class="fl">15</span><span class="op">)</span>, control <span class="op">=</span> <span class="va">control</span>,</span></span>
 <span class="r-in"><span>  metadata <span class="op">=</span> <span class="va">model_metadata</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>

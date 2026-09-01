@@ -119,7 +119,11 @@ Other functions:
 
 A typical example dataset for a ProxiMate device can be found in:
 
-- [`NIRcannabis`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/NIRcannabis.md)
+- [`proximateCannabis`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proximateCannabis.md)
+
+A typical example dataset for a ProxiScout device can be found in:
+
+- [`proxiscoutCannabis`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proxiscoutCannabis.md)
 
 ## See also
 

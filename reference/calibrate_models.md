@@ -244,7 +244,7 @@ Leonardo Ramirez-Lopez and Claudio Orellano
 
 ``` r
 # \donttest{
-data("NIRcannabis")
+data("proximateCannabis")
 # the list of formulas for the models to be built
 app_formulas <- list(THC ~ spc, THCA ~ spc, CBD ~ spc, CBDA ~ spc)
 
@@ -266,7 +266,7 @@ precipes <- list(
 
 optimized_app <- calibrate_models(
   formulas = app_formulas,
-  data = NIRcannabis,
+  data = proximateCannabis,
   preprocess_recipes = precipes,
   methods = list(fit_plsr(15, type = "nwp")),
   return_inputs = TRUE,

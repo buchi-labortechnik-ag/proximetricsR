@@ -49,8 +49,8 @@ Leonardo Ramirez-Lopez with code from Antoine Stevens
 ## Examples
 
 ``` r
-data("NIRcannabis")
-X <- NIRcannabis$spc
+data("proximateCannabis")
+X <- proximateCannabis$spc
 
 snv <- prep_snv()
 recipe <- preprocess_recipe(snv)

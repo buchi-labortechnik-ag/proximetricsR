@@ -54,8 +54,8 @@ Leonardo Ramirez-Lopez
 ## Examples
 
 ``` r
-data("NIRcannabis")
-X <- NIRcannabis$spc # absorbance
+data("proximateCannabis")
+X <- proximateCannabis$spc # absorbance
 
 tr <- prep_transform(to = "reflectance")
 recipe <- preprocess_recipe(tr, device = "proxiscout")

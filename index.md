@@ -7,7 +7,7 @@ status](https://www.r-pkg.org/badges/version/proximetricsR?v=2.png)](https://CRA
 
 ![proximetricsR logo](./reference/figures/logo.png)
 
-*Last update: 2026-08-14*
+*Last update: 2026-08-26*
 
 Version: 0.7.1 – Valinhos
 
@@ -54,7 +54,7 @@ RcppArmadillo).
 
 library(proximetricsR)
 
-data("NIRcannabis")
+data("proximateCannabis")
 # the list of formulas for the models to be built
 app_formulas <- list(THC ~ spc, THCA ~ spc, CBD ~ spc, CBDA ~ spc)
 
@@ -76,7 +76,7 @@ precipes <- list(
 
 optimized_app <- calibrate_models(
   formulas = app_formulas,
-  data = NIRcannabis,
+  data = proximateCannabis,
   preprocess_recipes = precipes,
   methods = list(fit_plsr(15, type = "nwp")),
   return_inputs = TRUE,

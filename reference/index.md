@@ -2,9 +2,6 @@
 
 ## All functions
 
-- [`NIRcannabis`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/NIRcannabis.md)
-  : NIRcannabis
-
 - [`add_application_metadata()`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/add_application_metadata.md)
   :
 
@@ -70,6 +67,9 @@
   [`process()`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/preprocess_recipe.md)
   : Build and execute spectral preprocessing recipes
 
+- [`proximateCannabis`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proximateCannabis.md)
+  : proximateCannabis
+
 - [`proximate_add2nax()`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proximate_add2nax.md)
   : Prepare data for augmenting a nax application
 
@@ -108,6 +108,9 @@
 - [`proximetricsR-package`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proximetricsR-package.md)
   [`proximetricsR`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proximetricsR-package.md)
   : Overview of the proximetricsR package
+
+- [`proxiscoutCannabis`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proxiscoutCannabis.md)
+  : proxiscoutCannabis
 
 - [`proxiscout_read_data()`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proxiscout_read_data.md)
   : Read and parse ProxiScout data from CSV or XLSX files

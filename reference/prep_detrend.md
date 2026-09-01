@@ -62,8 +62,8 @@ Leonardo Ramirez-Lopez
 ## Examples
 
 ``` r
-data("NIRcannabis")
-X <- NIRcannabis$spc
+data("proximateCannabis")
+X <- proximateCannabis$spc
 
 # Pure polynomial detrend
 dt <- prep_detrend(p = 2)
