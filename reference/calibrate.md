@@ -29,7 +29,12 @@ calibrate(X, Y, data = NULL, group = NULL,
           ...)
 
 # S3 method for class 'spectral_model'
-predict(object, newdata, ncomp = object$final_ncomp, verbose = TRUE, control_limit_conf = 0.99, ...)
+predict(object, 
+         newdata, 
+         ncomp = object$final_ncomp, 
+         verbose = TRUE, 
+         control_limit_conf = 0.99, 
+         ...)
 ```
 
 ## Arguments
