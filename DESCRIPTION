@@ -1,8 +1,8 @@
 Package: proximetricsR
 Type: Package
 Title: Spectral Preprocessing and Chemometric Calibration of NIR Sensors
-Version: 0.7.1
-Date: 2026-09-01
+Version: 0.7.2
+Date: 2026-09-06
 Authors@R: c(
     person(given = "Leonardo",
            family = "Ramirez-Lopez",
@@ -32,7 +32,7 @@ Authors@R: c(
 Maintainer: 
     Leonardo Ramirez-Lopez <ramirez-lopez.l@buchi.com>
 BugReports: 
-    https://github.com/buchi-labortechnik-ag/proximetricsr/issues
+    https://github.com/buchi-labortechnik-ag/proximetricsR/issues
 Description: Provides tools to build quantitative chemometric models and
     applications for near-infrared (NIR) sensors. Chemometric regression
     models are based on partial least squares regression as described by
@@ -75,6 +75,6 @@ LazyData: true
 LazyDataCompression: xz
 Encoding: UTF-8
 Config/testthat/edition: 3
-Config/VersionName: Valinhos
+Config/VersionName: NewCastle
 Config/roxygen2/version: 8.0.0
 Config/roxygen2/markdown: TRUE

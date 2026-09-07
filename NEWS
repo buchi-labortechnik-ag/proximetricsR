@@ -1,3 +1,7 @@
+proximetricsR 0.7.1 "NewCastle"
+===============
+* 
+
 proximetricsR 0.7.1 "Valinhos"
 ===============
 * Feat: new dataset `proxiscoutCannabis`, containing absorbance spectra of 192 cannabis samples measured with three ProxiScout devices at the 257 standard ProxiScout wavenumbers, together with eleven cannabinoid reference variables (`CBDA`, `CBG`, `CBD`, `CBN`, `THC`, `THCA`, `CBC`, `CBGA`, `CBD_total`, `THC_total` and `CBGt`). The set includes one deliberate outlier and a `deviceId` column usable as `validation_group`.
