@@ -66,7 +66,7 @@ proxiscout_write_model_info <- function(object, n_measurements = 1L, file = NULL
     rpd_cv <- if (valid_nonzero(rmse_cv) && valid_nonzero(sd_ref)) sd_ref / rmse_cv else 0.0
     cv_predictions <- object$final_model$model_cv$predicted
     if (!is.null(cv_predictions)) {
-      bias_cv <- mean(Y - cv_predictions[, final_ncomp])
+      bias_cv <- mean(cv_predictions[, final_ncomp] - Y)
     }
   }
   
