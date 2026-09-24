@@ -23,6 +23,7 @@ proximetricsR 0.7.1 "Valinhos"
 * Fix: `extract_property_names()` no longer returns the internal `.repetition_group` column as a property for `proxiscout_data`.
 * Tests: added unit tests for `extract_property_names()` and the missing-value handling in `proxiscout_read_data()`.
 * Docs: documented the new arguments, validation statistics and plot, including in `model_plot_template.qmd`.
+* Feat: `export_sklearn_model()` exports a model as openmodels-format JSON that loads in Python as a real `sklearn.pipeline.Pipeline`, using chemotools transformers for the preprocessing recipe and `proximetricsr-estimators`' `NIRWiseLinearModel` for the regression step, so a model calibrated here can be deployed without an R runtime. Restricted to preprocessing with a chemotools equivalent: `algorithm = "nwp"`, `"gap-segment"`, `prep_resample()`, `prep_transform(to = "reflectance")` and `prep_wav_trim(trim_constant_edges = TRUE)` raise a named error explaining why the step cannot be represented.
 
 proximetricsR 0.7.0 "Matterhorn2"
 ===============
