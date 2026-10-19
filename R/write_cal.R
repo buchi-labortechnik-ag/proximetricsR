@@ -142,7 +142,7 @@ write_cal <- function(object, path, tsv_paths = "", application_name = "Untitled
   #   .export = NULL
   # ) %mydo% {
   for (model in object) {
-    target_name <- model$target_variable
+    target_name <- clean_property_names(model$target_variable, notify = FALSE)
     proj_name <- paste0(application_name, ".", target_name, ".prj")
     save_dir <- paste0(path, application_name, ".", target_name, ".cal")
 
@@ -164,7 +164,7 @@ write_cal <- function(object, path, tsv_paths = "", application_name = "Untitled
     relevant_data <- tsv_data[cal_stats$Sample_index, ]
 
     # Reference
-    all_target_names <- sapply(object, FUN = "[[", MARGIN = "target_variable")
+    all_target_names <- clean_property_names(sapply(object, FUN = "[[", MARGIN = "target_variable"), notify = FALSE)
     ref_number <- which(target_name == all_target_names)
     if (is.null(object[[ref_number]]$metadata$DecimalPlaces)) {
       decimals_units <- "0.0"

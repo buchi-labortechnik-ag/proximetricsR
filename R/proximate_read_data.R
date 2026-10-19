@@ -142,6 +142,9 @@ proximate_read_data <- function(file) {
     }
   }
 
+  properties <- extract_property_names(datar)
+  colnames(datar)[match(properties, colnames(datar))] <- clean_property_names(properties)
+
   convnirw_red <- list()
   for (i in seq_along(convnirw)) {
     convnirw_red[[i]] <- convnirw[[i]][1, ]

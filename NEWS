@@ -2,6 +2,9 @@ proximetricsR 0.7.2 "NewCastle"
 ===============
 * Fix: Corrected bias calculation for in `proxiscout_write_model_info`.
 * Fix: Removed the overly restrictive identification for repetitions in `proxiscout_read_data` that included the exact same measurement time.
+* Fix: `calibrate()` and `predict()` no longer fail for property names containing regular expression characters (e.g. `{`, `(`).
+* Fix: Property names are cleaned when importing and exporting data and applications. Characters not allowed in file names or breaking the file formats (`\ / : * ? " < > | ; # , { } [ ]`, whitespace) are removed at the start and end of a name and replaced by `_` elsewhere, e.g. `Fat (%)` becomes `Fat_(%)` and `Protein??` becomes `Protein`. Renamed properties are reported in a message.
+* Fix: `proximate_recalibrate_nax()` no longer fails for properties without a unit.
 
 proximetricsR 0.7.1 "Valinhos"
 ===============

@@ -229,6 +229,8 @@ proxiscout_read_data <- function(file, references_file) {
   if (assign_class) {
     class(x) <- c("proxiscout_data", "data.frame")
   }
+  properties <- extract_property_names(x)
+  colnames(x)[match(properties, colnames(x))] <- clean_property_names(properties)
   x$predictions <- predictions
   x$spc <- spc
   x

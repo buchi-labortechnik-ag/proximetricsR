@@ -248,7 +248,9 @@ proximate_write_nax <- function(object, path, metadata, tsv_name, empty_tsv_name
   # Change Argument1 of each model metadata (if NULL) to name of calibration file
   for (i in 1:length(object)) {
     if (is.null(object[[i]]$metadata$Argument1)) {
-      object[[i]]$metadata$Argument1 <- paste0(application_name, ".", object[[i]]$target_variable, ".cal")
+      object[[i]]$metadata$Argument1 <- paste0(
+        application_name, ".", clean_property_names(object[[i]]$target_variable, notify = FALSE), ".cal"
+      )
     }
     if (change_order) object[[i]]$metadata$SortOrder <- i
   }
@@ -355,7 +357,7 @@ proximate_write_nax <- function(object, path, metadata, tsv_name, empty_tsv_name
     verbose = verbose,
     internal_prj_path = internal_prj_path
   )
-  all_target_names <- sapply(object, FUN = "[[", MARGIN = "target_variable")
+  all_target_names <- clean_property_names(sapply(object, FUN = "[[", MARGIN = "target_variable"), notify = FALSE)
   files_to_zip <- append(
     files_to_zip,
     paste0("Calibrations/", application_name, ".", all_target_names, ".cal")
@@ -373,7 +375,7 @@ proximate_write_nax <- function(object, path, metadata, tsv_name, empty_tsv_name
 
   ext_files_to_zip <- list()
   if (!is.null(external_properties)) {
-    all_ext_target_names <- sapply(external_properties, FUN = "[[", MARGIN = "Name")
+    all_ext_target_names <- clean_property_names(sapply(external_properties, FUN = "[[", MARGIN = "Name"), notify = FALSE)
     ignore_property <- duplicated(all_ext_target_names)
     if (any(ignore_property)) {
       warning("Duplicated property names found in 'external_properties'. Only the first entry will be used.")

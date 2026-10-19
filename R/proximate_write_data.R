@@ -202,8 +202,7 @@ proximate_write_data <- function(x, file, id, spc = "spc", spc_round = 8, barcod
   }
 
   prpts <- x[, properties, drop = FALSE]
-  colnames(prpts) <- gsub("[[:punct:]]", "_", colnames(prpts))
-  colnames(prpts) <- gsub("^_|_$", "", colnames(prpts))
+  colnames(prpts) <- clean_property_names(colnames(prpts))
 
   if (!is.null(x$ROW) && is.numeric(x$ROW)) {
     rows <- x$ROW

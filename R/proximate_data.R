@@ -191,6 +191,7 @@ proximate_data <- function(spc, id, properties = NULL, row = seq_len(nrow(spc)),
     if (any(is.null(colnames(properties)))) {
       stop("Missing column names found in 'properties'.")
     }
+    colnames(properties) <- clean_property_names(colnames(properties))
   }
   if (any(!is_numeric_like(colnames(spc)))) {
     if (any(!is_numeric_like(gsub("spc.", "", colnames(spc))))) {

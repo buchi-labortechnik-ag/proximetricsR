@@ -76,6 +76,7 @@ write_nad <- function(object, path, application_meta, external_properties = NULL
   string_property_meta <- list()
   for (model in object) {
     property_meta <- model$metadata
+    property_meta$Name <- clean_property_names(property_meta$Name, notify = FALSE)
     # Bring everything into right format
     for (meta_name in names(property_meta)) {
       if (is.character(property_meta[[meta_name]])) {
@@ -102,7 +103,7 @@ write_nad <- function(object, path, application_meta, external_properties = NULL
 
   if (!is.null(external_properties)) {
     for (ext_property in external_properties) {
-      ext_property_name <- ext_property$Name
+      ext_property$Name <- ext_property_name <- clean_property_names(ext_property$Name, notify = FALSE)
       if (is.null(ext_property$Argument1)) {
         ext_property$Argument1 <- paste0(application_name, ".", ext_property_name, ".cal")
       }

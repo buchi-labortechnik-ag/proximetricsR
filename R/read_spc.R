@@ -80,8 +80,10 @@ read_spc <- function(
   wavs <- colnames(spc)
   wavs <- gsub("^[A-Z a-z]{0,}", "", wavs)
   colnames(spc) <- wavs
-  dat <- data.frame(dat)
+  dat <- data.frame(dat, check.names = FALSE)
   dat <- dat[, -spectral_columns, drop = FALSE]
+  properties <- extract_property_names(dat)
+  colnames(dat)[match(properties, colnames(dat))] <- clean_property_names(properties)
   dat$spc <- spc
   class(dat) <- c("proximate_data", "data.frame")
   dat
