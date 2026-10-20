@@ -61,9 +61,6 @@ export the same as \code{"modified"} ones;
 \item \code{prep_derivative(algorithm = "gap-segment")} (its chemotools
 equivalent, \code{NorrisWilliams}, precomputes an internal kernel that
 has not yet been verified to reproduce correctly from R);
-\item \code{prep_transform(to = "reflectance")} (mirrors
-\code{\link{proxiscout_write_model}}'s existing behaviour of only
-supporting the reflectance-to-absorbance direction);
 \item \code{prep_wav_trim(trim_constant_edges = TRUE)} (data-dependent, no
 chemotools equivalent);
 \item \code{prep_resample()} (its chemotools equivalent,
@@ -91,6 +88,11 @@ proximetricsR's \code{to = "absorbance"} computes \mjeqn{A = -\log_{10}(R)}{A =
 -log10(R)} directly from reflectance, which is what chemotools calls
 "pseudoabsorbance" (its "absorbance"/"transmittance" pair instead follows the
 Beer-Lambert transmittance convention, a different physical quantity).
+Likewise, \code{prep_transform(to = "reflectance")} (\mjeqn{R = 10^{-A}}{R =
+10^(-A)}) is exported as \code{IntensityConversion(input_unit =
+"pseudoabsorbance", output_unit = "reflectance")}. Unlike
+\code{\link{proxiscout_write_model}}, which skips this direction because the
+ProxiScout device has no such operation, it is fully supported here.
 }
 \examples{
 \donttest{
@@ -112,5 +114,5 @@ json <- export_sklearn_model(model)
 \code{\link{calibrate}}, \code{\link{proxiscout_write_model}}
 }
 \author{
-Leonardo Ramirez-Lopez
+Alejandro Gutierrez
 }

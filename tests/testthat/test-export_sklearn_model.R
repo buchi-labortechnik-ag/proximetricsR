@@ -82,7 +82,7 @@ test_that("export_sklearn_model rejects prep_derivative(algorithm = 'gap-segment
   expect_error(export_sklearn_model(gap_model), "gap-segment")
 })
 
-test_that("export_sklearn_model rejects prep_transform(to = 'reflectance')", {
+test_that("export_sklearn_model exports prep_transform(to = 'reflectance')", {
   recipe <- preprocess_recipe(
     prep_transform(to = "reflectance"),
     device = "proxiscout"
@@ -92,7 +92,28 @@ test_that("export_sklearn_model rejects prep_transform(to = 'reflectance')", {
     data = dat, preprocess = recipe, method = fit_plsr(5, "standard"),
     control = calibration_control("none"), verbose = FALSE
   )
-  expect_error(export_sklearn_model(reflectance_model), 'to = "reflectance"')
+  doc <- jsonlite::fromJSON(
+    export_sklearn_model(reflectance_model),
+    simplifyVector = FALSE
+  )
+  step <- doc$params$steps[[1]][[2]]
+  expect_equal(step$estimator_class, "IntensityConversion")
+  expect_equal(step$params$input_unit, "pseudoabsorbance")
+  expect_equal(step$params$output_unit, "reflectance")
+})
+
+test_that("export_sklearn_model rejects prep_snv() followed by prep_transform()", {
+  recipe <- preprocess_recipe(
+    prep_snv(),
+    prep_transform(to = "reflectance"),
+    device = "unspecified"
+  )
+  snv_model <- calibrate(
+    X, Y,
+    data = dat, preprocess = recipe, method = fit_plsr(5, "standard"),
+    control = calibration_control("none"), verbose = FALSE
+  )
+  expect_error(export_sklearn_model(snv_model), "non-linear step")
 })
 
 test_that("export_sklearn_model rejects prep_wav_trim(trim_constant_edges = TRUE)", {

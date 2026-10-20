@@ -57,9 +57,6 @@
 #'   \item \code{prep_derivative(algorithm = "gap-segment")} (its chemotools
 #'     equivalent, \code{NorrisWilliams}, precomputes an internal kernel that
 #'     has not yet been verified to reproduce correctly from R);
-#'   \item \code{prep_transform(to = "reflectance")} (mirrors
-#'     \code{\link{proxiscout_write_model}}'s existing behaviour of only
-#'     supporting the reflectance-to-absorbance direction);
 #'   \item \code{prep_wav_trim(trim_constant_edges = TRUE)} (data-dependent, no
 #'     chemotools equivalent);
 #'   \item \code{prep_resample()} (its chemotools equivalent,
@@ -87,6 +84,11 @@
 #' -log10(R)} directly from reflectance, which is what chemotools calls
 #' "pseudoabsorbance" (its "absorbance"/"transmittance" pair instead follows the
 #' Beer-Lambert transmittance convention, a different physical quantity).
+#' Likewise, \code{prep_transform(to = "reflectance")} (\mjeqn{R = 10^{-A}}{R =
+#' 10^(-A)}) is exported as \code{IntensityConversion(input_unit =
+#' "pseudoabsorbance", output_unit = "reflectance")}. Unlike
+#' \code{\link{proxiscout_write_model}}, which skips this direction because the
+#' ProxiScout device has no such operation, it is fully supported here.
 #'
 #' @seealso \code{\link{calibrate}}, \code{\link{proxiscout_write_model}}
 #'
@@ -105,7 +107,7 @@
 #' )
 #' json <- export_sklearn_model(model)
 #' }
-#' @author Leonardo Ramirez-Lopez
+#' @author Alejandro Gutierrez
 #' @export
 export_sklearn_model <- function(object, file = NULL) {
   if (!inherits(object, "spectral_model")) {
@@ -475,21 +477,22 @@ export_sklearn_model <- function(object, file = NULL) {
       attribute_dtypes = list(indices_ = "int32")
     ),
     prep_transform = {
-      if (!identical(step$to, "absorbance")) {
-        stop(
-          "export_sklearn_model() only supports prep_transform(to = \"absorbance\"); ",
-          "'to = \"reflectance\"' has no supported chemotools export path (mirrors ",
-          "proxiscout_write_model()'s existing behaviour)."
-        )
-      }
       # proximetricsR's "absorbance" here is A = -log10(R) computed directly from
       # reflectance: chemotools calls this conversion pair "pseudoabsorbance"
       # (reflectance-based), distinct from its "absorbance"/"transmittance" pair
       # (Beer-Lambert, transmittance-based) -- see export_sklearn_model()'s details.
+      # The reverse, to = "reflectance" (R = 10^(-A)), is the same pair inverted.
       # IntensityConversion.fit() sets no fitted state beyond n_features_in_.
+      units <- if (identical(step$to, "absorbance")) {
+        c("reflectance", "pseudoabsorbance")
+      } else if (identical(step$to, "reflectance")) {
+        c("pseudoabsorbance", "reflectance")
+      } else {
+        stop("Unsupported prep_transform target '", step$to, "'.")
+      }
       list(
         estimator_class = "IntensityConversion",
-        params = list(input_unit = "reflectance", output_unit = "pseudoabsorbance"),
+        params = list(input_unit = units[1], output_unit = units[2]),
         param_types = list(input_unit = "str", output_unit = "str"),
         attributes = list(n_features_in_ = n_features_in),
         attribute_types = list(n_features_in_ = "int")
