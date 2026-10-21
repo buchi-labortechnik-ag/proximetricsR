@@ -81,9 +81,10 @@
 #'   - A \code{.repetition_group} integer column is added, identifying rows that
 #'   correspond to repeated scans of the same sample: for two-file input, rows
 #'   merged to the same reference row share a group id; for single-file input,
-#'   groups are derived from the sample ID column's repetition suffix (see
-#'   \code{\link{proxiscout_repetition_pattern}}), optionally disambiguated by
-#'   scanner/device and date columns when present. This column is meant for
+#'   rows sharing the same sample ID, after removing the repetition suffix (see
+#'   \code{\link{proxiscout_repetition_pattern}}), share a group id. In both
+#'   cases, rows from different scanners/devices (when such a column is present
+#'   in \code{file}) are never grouped together. This column is meant for
 #'   downstream aggregation of repeated measurements and is not guaranteed to be
 #'   meaningful if no ID-like column is found in the input. For two-file input,
 #'   rows in \code{file} with no matching sample in \code{references_file} have
@@ -104,6 +105,7 @@ proxiscout_read_data <- function(file, references_file) {
     stop(paste("Unsupported file format:", ext))
   }
   id_regex <- "^id$|^sample[ _.-]?name$|^name$|^sample[ _.-]?id$"
+  scanner_regex <- "^(scanner|device)[ _.-]?id$|^(scanner|device)[ _.-]?name$|^(scanner|device)$"
   x_colnames <- colnames(x)
   cspc <- grep("^[0-9]{3}[0-9]*\\.?[0-9]*[0-9]$|^[0-9]{3,}$", x_colnames)
   num_colnames <- gsub("^X", "", colnames(x[, cspc, drop = FALSE])) |> as.numeric()
@@ -183,6 +185,8 @@ proxiscout_read_data <- function(file, references_file) {
     x[[".clean_sample_id"]] <- ifelse(raw_id %in% refs[[refs_sample_col]], raw_id, stripped_id)
     # For ordering purposes, add a column that we will remove later
     x$.order <- seq_len(nrow(x))
+    # Scanner of each spectrum, taken before merging in case refs share the column
+    scanner_key <- add_regex_col(x, scanner_regex, "")
 
     x <- merge(
       x,
@@ -205,30 +209,31 @@ proxiscout_read_data <- function(file, references_file) {
       fallback_group <- match(x$.clean_sample_id[unmatched], unique(x$.clean_sample_id[unmatched]))
       x$.repetition_group[unmatched] <- next_group + fallback_group
     }
+    # Measurements from different scanners are not repeats
+    group_key <- paste(x$.repetition_group, scanner_key)
+    x$.repetition_group <- match(group_key, unique(group_key))
     x$.clean_sample_id <- NULL
     rownames(x) <- seq_len(nrow(x))
   } else {
     # Attach column .repetition_group to x
     x[[".repetition_group"]] <- seq_len(nrow(x))
-    # If only a single file is given, we check for a column for the sample name
-    # This column should indicate whether there are repetitions in the data
+    # If only a single file is given, rows sharing the sample name (without
+    # repetition suffix) are repetitions
     if (any(grepl(id_regex, colnames(x), ignore.case = TRUE))) {
       wh_id <- grep(id_regex, colnames(x), ignore.case = TRUE)
       id_col <- x[[wh_id[1]]]
-      # If the data exhibits a repetition pattern, modify the repetition group column
-      if (any(grepl(proxiscout_repetition_pattern(), id_col, ignore.case = TRUE))) {
-        group_key <- gsub(proxiscout_repetition_pattern(), "", id_col)
-        # If there is a column for scanner or for the date, add them to the group key.
-        # These are typically different for measurements that are not repeats.
-        group_key <- add_regex_col(x, "^(scanner|device)[ _.-]?id$|^(scanner|device)[ _.-]?name$|^(scanner|device)$", group_key)
-        x[[".repetition_group"]] <- match(group_key, unique(group_key))
-      }
+      group_key <- gsub(proxiscout_repetition_pattern(), "", id_col)
+      # Measurements from different scanners are not repeats
+      group_key <- add_regex_col(x, scanner_regex, group_key)
+      x[[".repetition_group"]] <- match(group_key, unique(group_key))
     }
   }
   # Assign proxiscout class if the data originates from ProxiScout
   if (assign_class) {
     class(x) <- c("proxiscout_data", "data.frame")
   }
+  properties <- extract_property_names(x)
+  colnames(x)[match(properties, colnames(x))] <- clean_property_names(properties)
   x$predictions <- predictions
   x$spc <- spc
   x

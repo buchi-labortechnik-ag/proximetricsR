@@ -165,6 +165,47 @@ test_that("single-file input: .repetition_group groups repeated sample ids", {
   expect_false(result$.repetition_group[1] %in% result$.repetition_group[3])
 })
 
+test_that("single-file input: duplicated sample ids without suffix are grouped", {
+  x_dup <- data.frame(
+    SampleID = c("A", "A", "B", "C", "C", "C"),
+    "3921" = c(50.1, 48.3, 47.0, 46.1, 45.2, 44.3),
+    check.names = FALSE
+  )
+  result <- proxiscout_read_data(write_spec_csv(x_dup))
+  expect_equal(result$.repetition_group, c(1L, 1L, 2L, 3L, 3L, 3L))
+})
+
+test_that("single-file input: suffixed and duplicated sample ids share a group", {
+  x_mix <- data.frame(
+    SampleID = c("A_1", "A_1", "A_2", "A", "B_1"),
+    "3921" = c(50.1, 48.3, 47.0, 46.1, 45.2),
+    check.names = FALSE
+  )
+  result <- proxiscout_read_data(write_spec_csv(x_mix))
+  expect_equal(result$.repetition_group, c(1L, 1L, 1L, 1L, 2L))
+})
+
+test_that("single-file input: same sample id on different scanners is not grouped", {
+  x_dev <- data.frame(
+    SampleID = c("A", "A", "A_1", "A_2"),
+    deviceId = c("S1", "S1", "S2", "S2"),
+    "3921" = c(50.1, 48.3, 47.0, 46.1),
+    check.names = FALSE
+  )
+  result <- proxiscout_read_data(write_spec_csv(x_dev))
+  expect_equal(result$.repetition_group, c(1L, 1L, 2L, 2L))
+})
+
+test_that("single-file input: unique sample ids get one group each", {
+  x_uniq <- data.frame(
+    SampleID = c("A", "B", "C"),
+    "3921" = c(50.1, 48.3, 47.0),
+    check.names = FALSE
+  )
+  result <- proxiscout_read_data(write_spec_csv(x_uniq))
+  expect_equal(result$.repetition_group, 1:3)
+})
+
 test_that("two-file merge: happy path with shared id column", {
   x1 <- data.frame(
     SampleID = c("A", "B", "C"),
@@ -329,6 +370,33 @@ test_that("csv read converts '-', 'NA' and blank markers to numeric NA", {
 
   expect_true(is.numeric(result_csv_na$fat))
   expect_equal(as.numeric(result_csv_na$fat), c(1.5, NA, 2.5))
+})
+
+test_that("two-file merge: repeats of the same sample on different scanners are not grouped", {
+  x8 <- data.frame(
+    sampleName = c("A_1", "A_2", "A_1", "A_2", "B_1", "B_1"),
+    deviceId = c("S1", "S1", "S2", "S2", "S1", "S2"),
+    "3921" = c(50, 51, 60, 61, 40, 45),
+    check.names = FALSE
+  )
+  refs8 <- data.frame(sampleName = c("A", "B"), moisture = c(10, 20))
+  result <- proxiscout_read_data(write_spec_csv(x8), write_spec_csv(refs8))
+
+  expect_equal(result$.repetition_group, c(1L, 1L, 2L, 2L, 3L, 4L))
+  expect_equal(result$moisture, c(10, 10, 10, 10, 20, 20))
+})
+
+test_that("two-file merge: scanner grouping uses the spectra file when refs share the scanner column", {
+  x9 <- data.frame(
+    sampleName = c("A_1", "A_2", "A_1"),
+    deviceId = c("S1", "S1", "S2"),
+    "3921" = c(50, 51, 60),
+    check.names = FALSE
+  )
+  refs9 <- data.frame(sampleName = "A", deviceId = "S1", moisture = 10)
+  result <- proxiscout_read_data(write_spec_csv(x9), write_spec_csv(refs9))
+
+  expect_equal(result$.repetition_group, c(1L, 1L, 2L))
 })
 
 test_that("two-file merge: '-' / 'NA' markers in the references file are read as numeric NA", {

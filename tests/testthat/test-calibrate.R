@@ -409,3 +409,22 @@ test_that("Return inputs must be a logical", {
 test_that("Verbose must be a logical", {
   expect_error(calibrate(X, Y, dat, method = method, verbose = "1"), "'verbose' must be a logical.")
 })
+
+test_that("Property names with regex special characters are supported", {
+  dat_special <- dat
+  dat_special[["Moisture{{{{}}}}{}"]] <- dat_special$CBDA
+  model_special <- calibrate(
+    `Moisture{{{{}}}}{}` ~ spc,
+    data = dat_special, preprocess = pretreats,
+    method = method, control = control, skip_indices = skiped_ind, verbose = FALSE
+  )
+  expect_equal(
+    model_special$final_model$model$coefficients,
+    model1$final_model$model$coefficients,
+    ignore_attr = TRUE
+  )
+  expect_equal(
+    suppressMessages(predict(model_special, dat_special))$predictions,
+    suppressMessages(predict(model1, dat))$predictions
+  )
+})

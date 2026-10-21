@@ -114,3 +114,40 @@ test_that("default: returns numeric columns except spc", {
   )
   expect_equal(extract_property_names(x), "moisture")
 })
+
+# -----------------------------------------------------------------------
+# clean_property_names()
+# -----------------------------------------------------------------------
+
+test_that("clean_property_names: unsupported characters are replaced", {
+  expect_equal(
+    clean_property_names(
+      c("Fat (%)", "Protein??????", "Moisture{{{{}}}}{}", "a/b:c;d#e,f", "a\tb"),
+      notify = FALSE
+    ),
+    c("Fat_(%)", "Protein", "Moisture", "a_b_c_d_e_f", "a_b")
+  )
+})
+
+test_that("clean_property_names: supported names are returned unchanged", {
+  nms <- c("CBD", "CBD__total", ".repetition_group", "Fat_(%)", "pH-value", "")
+  expect_silent(cleaned <- clean_property_names(nms))
+  expect_identical(cleaned, nms)
+})
+
+test_that("clean_property_names: cleaning twice gives the same result", {
+  cleaned <- clean_property_names(c("Fat (%)", "a?_b", " x "), notify = FALSE)
+  expect_identical(clean_property_names(cleaned, notify = FALSE), cleaned)
+})
+
+test_that("clean_property_names: renamed properties are reported", {
+  expect_message(clean_property_names("Fat (%)"), "'Fat (%)' -> 'Fat_(%)'", fixed = TRUE)
+})
+
+test_that("clean_property_names: names that collide or become empty raise an error", {
+  expect_error(clean_property_names(c("Fat?", "Fat*"), notify = FALSE), "no longer unique")
+  expect_error(clean_property_names(c("Fat", "Fat?"), notify = FALSE), "no longer unique")
+  expect_error(clean_property_names("???", notify = FALSE), "only contain unsupported characters")
+  # Names that were already duplicated before cleaning are not reported
+  expect_identical(clean_property_names(c("CBD", "CBD")), c("CBD", "CBD"))
+})

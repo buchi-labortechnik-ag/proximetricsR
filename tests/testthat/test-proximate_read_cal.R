@@ -102,6 +102,20 @@ test_that("proximate_read_cal errors when given mixed extensions", {
   )
 })
 
+test_that("proximate_read_cal reads property names with spaces and cleans them", {
+  cal_lines <- readLines(cal_file, warn = FALSE)
+  cal_lines <- sub("^(Selector1:Y[0-9]*\t)Fat ", "\\1Fat (%)? ", cal_lines)
+  special_cal <- tempfile(fileext = ".cal")
+  writeLines(cal_lines, special_cal)
+  expect_message(
+    result <- suppressWarnings(proximate_read_cal(special_cal, ignore_version = TRUE)),
+    "'Fat (%)?' -> 'Fat_(%)'",
+    fixed = TRUE
+  )
+  expect_equal(result$summary$Property, "Fat_(%)")
+  file.remove(special_cal)
+})
+
 # ─── 7. predict.read_cal returns predictions and distances ────────────────────
 
 test_that("predict.read_cal returns a list with predictions and distances", {

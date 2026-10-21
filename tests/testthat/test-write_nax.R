@@ -158,6 +158,35 @@ test_that("Creating an application with external files works", {
   expect_nax_file(gen_nax_file, exp_filenames)
 })
 
+test_that("Applications can be written and read with unsupported characters in property names", {
+  dat <- proximateCannabis[seq(1, 80, by = 5), ]
+  dat$spc <- dat$spc[, seq(1, 234, by = 10)]
+  colnames(dat)[colnames(dat) == "CBD"] <- "CBD (%)?"
+
+  model <- calibrate(
+    `CBD (%)?` ~ spc,
+    data = dat, method = fit_plsr(3), verbose = FALSE, return_inputs = TRUE,
+    metadata = add_model_metadata(key = "", created = "T", changed = "T")
+  )
+  special_dir <- file.path(tempdir(), "special_nax")
+  app_meta <- add_application_metadata(name = "special_nax", key = "", created = "T", changed = "T")
+  expect_message(
+    proximate_write_nax(list(model), path = special_dir, metadata = app_meta, verbose = FALSE),
+    "'CBD (%)?' -> 'CBD_(%)'",
+    fixed = TRUE
+  )
+
+  nax_file <- file.path(special_dir, "special_nax.nax")
+  exp_files <- paste0("Calibrations/special_nax.CBD_(%).", c("cal", "prj", "rtf"))
+  expect_true(all(exp_files %in% zip::zip_list(nax_file)$filename))
+
+  nax <- proximate_read_nax(nax_file)
+  expect_equal(nax$nad_info$summary$properties$names, "CBD_(%)")
+  expect_equal(nax$cal_info$summary$Property, "CBD_(%)")
+  expect_true("CBD_(%)" %in% extract_property_names(nax$data$data[[1]]))
+  unlink(special_dir, recursive = TRUE)
+})
+
 #################
 # SANITY CHECKS #
 #################

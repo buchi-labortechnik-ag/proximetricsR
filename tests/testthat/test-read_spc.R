@@ -172,6 +172,27 @@ test_that("read_spc works with semicolon separator and European decimal", {
   expect_equal(nrow(result), 2L)
 })
 
+test_that("read_spc keeps column names and cleans property names", {
+  special_df <- data.frame(
+    "Sample ID" = c("a", "b"),
+    "Fat (%)" = c(1.5, 2.5),
+    "Protein??" = c(3.5, 4.5),
+    X1001 = c(0.1, 0.2),
+    X1004 = c(0.3, 0.4),
+    check.names = FALSE
+  )
+  tmp_special <- tempfile(fileext = ".txt")
+  write.table(special_df, file = tmp_special, sep = "\t", row.names = FALSE)
+
+  expect_message(
+    result <- read_spc(tmp_special, spectra_prefix = "X"),
+    "'Fat (%)' -> 'Fat_(%)', 'Protein??' -> 'Protein'",
+    fixed = TRUE
+  )
+  expect_identical(colnames(result), c("Sample ID", "Fat_(%)", "Protein", "spc"))
+  file.remove(tmp_special)
+})
+
 on.exit(
   {
     if (file.exists(tmp_tab)) file.remove(tmp_tab)

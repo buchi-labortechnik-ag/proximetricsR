@@ -6,7 +6,7 @@
 #' @import jsonlite
 #' @importFrom utils read.table write.table setTxtProgressBar txtProgressBar read.csv packageDescription packageVersion
 #' @importFrom stats sd cor cov reshape quantile aggregate complete.cases na.omit na.pass
-#' @importFrom stats formula as.formula model.matrix model.frame model.extract predict
+#' @importFrom stats formula as.formula model.matrix model.frame model.extract predict reformulate
 #' @importFrom digest digest
 #' @importFrom withr with_seed
 #' @importFrom readxl read_excel

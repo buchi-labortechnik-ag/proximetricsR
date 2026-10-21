@@ -25,9 +25,10 @@ A \code{data.frame} where:
 \item A \code{.repetition_group} integer column is added, identifying rows that
 correspond to repeated scans of the same sample: for two-file input, rows
 merged to the same reference row share a group id; for single-file input,
-groups are derived from the sample ID column's repetition suffix (see
-\code{\link{proxiscout_repetition_pattern}}), optionally disambiguated by
-scanner/device and date columns when present. This column is meant for
+rows sharing the same sample ID, after removing the repetition suffix (see
+\code{\link{proxiscout_repetition_pattern}}), share a group id. In both
+cases, rows from different scanners/devices (when such a column is present
+in \code{file}) are never grouped together. This column is meant for
 downstream aggregation of repeated measurements and is not guaranteed to be
 meaningful if no ID-like column is found in the input. For two-file input,
 rows in \code{file} with no matching sample in \code{references_file} have

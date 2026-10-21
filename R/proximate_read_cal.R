@@ -128,7 +128,10 @@ proximate_read_cal <- function(file, ignore_version = FALSE) {
 
       p_line <- grep("Selector1:Y", bf)
       p_line <- p_line[length(p_line)]
-      property <- strsplit(bf[p_line], "\t| ")[[1]][2]
+      # The line is "Selector1:Y<n>\t<parameter> <min> <max> <format>", where
+      # <parameter> may contain spaces
+      property <- strsplit(sub("^Selector1:Y[0-9]*[\t ]", "", bf[p_line]), " ")[[1]]
+      property <- clean_property_names(paste(head(property, max(1, length(property) - 3)), collapse = " "))
       regression <- strsplit(bf[grep("Model1:Type", bf)], "\t| ")[[1]][2]
 
       # extract file paths

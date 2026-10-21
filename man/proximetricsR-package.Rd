@@ -105,7 +105,7 @@ Useful links:
 \itemize{
   \item \url{https://proximetricsr.r.packages.buchi-nir.io/}
   \item \url{https://github.com/buchi-labortechnik-ag/proximetricsr/}
-  \item Report bugs at \url{https://github.com/buchi-labortechnik-ag/proximetricsr/issues}
+  \item Report bugs at \url{https://github.com/buchi-labortechnik-ag/proximetricsR/issues}
 }
 
 }
