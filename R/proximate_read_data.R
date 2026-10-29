@@ -50,6 +50,10 @@ proximate_read_data <- function(file) {
     check.names = FALSE
   )
 
+  if (nrow(ftsv) == 0) {
+    stop("The tsv file contains a header but no data rows")
+  }
+
   empty_rows <- rowSums(!(is.na(ftsv) | ftsv == ""), na.rm = TRUE) == 0
 
   if (any(empty_rows)) {
