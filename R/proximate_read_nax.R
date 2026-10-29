@@ -104,7 +104,8 @@ proximate_read_nax <- function(file, ignore_version = FALSE) {
   # check the cal files
   calf_wext <- lfiles[grep(".cal$", lfiles)]
   calf <- get_fname(calf_wext)
-  cal_properties <- gsub(paste0(nad_info$summary$app_name, "."), "", calf)
+  cal_properties <- gsub(paste0(nad_info$summary$app_name, "."), "", calf, fixed = TRUE)
+  cal_properties <- clean_property_names(cal_properties, notify = FALSE)
 
   cal_idx <- sapply(
     nad_info$summary$properties$names,
@@ -127,7 +128,8 @@ proximate_read_nax <- function(file, ignore_version = FALSE) {
   rtfs <- lfiles[grep(".rtf$", lfiles)]
   if (length(rtfs) > 0) {
     rtff <- get_fname(rtfs)
-    rtf_properties <- gsub(paste0(nad_info$summary$app_name, "."), "", rtff)
+    rtf_properties <- gsub(paste0(nad_info$summary$app_name, "."), "", rtff, fixed = TRUE)
+    rtf_properties <- clean_property_names(rtf_properties, notify = FALSE)
     rtf_idx <- sapply(
       nad_info$summary$properties$names,
       FUN = function(x, x2) {
@@ -230,6 +232,7 @@ get_nad_info <- function(file) {
   })
   nad_info <- nad_info[!sapply(nad_info, FUN = is.null)]
   nad_properties <- sapply(nad_info[-1], FUN = function(x) x$value[grep("Name", x$param)])
+  nad_properties <- clean_property_names(nad_properties)
   nad_prop_units <- sapply(nad_info[-1], FUN = function(x) x$value[grep("Unit", x$param)])
   nad_geometry <- nad_info[[1]]$value[grep("ViewType", nad_info[[1]]$param)]
   nad_mode <- nad_info[[1]]$value[grep("MeasurementMode", nad_info[[1]]$param)]

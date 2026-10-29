@@ -104,7 +104,7 @@ proximate_recalibrate_nax <- function(x,
 
   warning("This is an experiental function!\U0001f609 Feedback is highly appreciated \U0001f64c")
 
-  rformulas <- lapply(paste0(x$cal_info$summary$Property, " ~ spc"), FUN = formula)
+  rformulas <- lapply(x$cal_info$summary$Property, FUN = function(p) reformulate("spc", response = as.name(p)))
 
   x$data$summary$path <- paste0("/", x$data$summary$Location, "/", x$data$summary$File, ".tsv")
 
@@ -157,13 +157,14 @@ proximate_recalibrate_nax <- function(x,
   for (i in x$cal_info$summary$Property) {
     nad_idx <- sapply(
       x$nad_info$data,
-      FUN = function(xx, test) xx$value[xx$param == "Name"] == test,
+      FUN = function(xx, test) clean_property_names(xx$value[xx$param == "Name"], notify = FALSE) == test,
       test = i
     )
     ith_meta <- x$nad_info$data[[which(nad_idx)]]
     dec_p <- as.numeric(ith_meta$value[ith_meta$param == "DecimalPlaces"])
     p_unit <- ith_meta$value[ith_meta$param == "Unit"]
-    p_unit <- ifelse(p_unit == "null", "", p_unit)
+    # Empty units are dropped when reading the .nad
+    if (length(p_unit) == 0 || p_unit == "null") p_unit <- ""
     mahal <- as.numeric(ith_meta$value[ith_meta$param == "MahalanobisLimit"])
     wav_range <- ith_meta$value[ith_meta$param == "WavelengthRange"]
     ## FIXME: DOCUMENT WHAT IS NOT UPDATED OR WHAT IS RESET

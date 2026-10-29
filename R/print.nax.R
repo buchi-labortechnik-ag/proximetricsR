@@ -60,11 +60,12 @@ print.nax <- function(x, ...) {
 
     for (i in seq_along(x$rtf_info$summary)) {
       ith_prop <- gsub(app_name, "", x$rtf_info$summary[[i]]$name, fixed = TRUE)
+      ith_prop <- clean_property_names(ith_prop, notify = FALSE)
       val_summary$Property[i] <- ith_prop
       val_summary$Method[i] <- names(x$rtf_info$summary[[i]]$description)[1]
 
       if (is.data.frame(x$cal_info$summary)) {
-        idx <- which(grepl(ith_prop, x$cal_info$summary$Property, ignore.case = TRUE))
+        idx <- which(tolower(x$cal_info$summary$Property) == tolower(ith_prop))
 
         if (!is.na(x$rtf_info$summary[[i]]$ncomp)) {
           val_summary[i, -(1:2)] <- x$rtf_info$summary[[i]]$description[x$rtf_info$summary[[i]]$ncomp, ]

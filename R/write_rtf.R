@@ -114,7 +114,7 @@ write_rtf <- function(object, path, tsv_path, application_name = "Untitled",
     pb <- txtProgressBar(min = 0, max = length(object), char = "-", style = 3)
   }
   for (model in object) {
-    target_name <- model$target_variable
+    target_name <- clean_property_names(model$target_variable, notify = FALSE)
     proj_name <- paste0(application_name, ".", target_name, ".rtf")
     save_dir <- paste0(path, proj_name)
     if (is.null(model$initial_fit)) {
@@ -124,7 +124,7 @@ write_rtf <- function(object, path, tsv_path, application_name = "Untitled",
     }
     cal_stats <- model[[model_p]]$calibration_statistics_all
     Y <- cal_stats$Target
-    target_line <- paste(model$target_variable, floor(min(Y, na.rm = T)), ceiling(max(Y, na.rm = T)))
+    target_line <- paste(target_name, floor(min(Y, na.rm = T)), ceiling(max(Y, na.rm = T)))
     if (is.null(model$metadata)) {
       target_line <- paste(target_line, "0.0")
     } else {
@@ -395,7 +395,7 @@ write_rtf <- function(object, path, tsv_path, application_name = "Untitled",
       n_deletes <- n_deletes + length(model$skipped_indices$manually_skipped)
       cal_stats <- model$final_model$calibration_statistics_all
       Y <- cal_stats$Target
-      target_line <- paste(model$target_variable, floor(min(Y, na.rm = T)), ceiling(max(Y, na.rm = T)))
+      target_line <- paste(target_name, floor(min(Y, na.rm = T)), ceiling(max(Y, na.rm = T)))
       if (is.null(model$metadata)) {
         target_line <- paste(target_line, "0.0")
       } else {

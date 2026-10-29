@@ -779,10 +779,8 @@ calibrate.formula <- function(formula, data, group = NULL,
   attr(trms, "intercept") <- 0
 
   xr <- model.matrix(trms, model.frame(mfr, drop.unused.levels = TRUE))
-  rmn <- paste0(names(attr(trms, "dataClasses")), collapse = "|")
-  colnames(xr) <- gsub(rmn, "", colnames(xr))
-
   predvars <- attr(delete.response(trms), "term.labels")
+  colnames(xr) <- gsub(predvars, "", colnames(xr), fixed = TRUE)
 
   if (!predvars %in% colnames(data)) {
     stop("Predictor variables not found in data. \nNote: this function does not allow for interactions between terms.")
@@ -964,7 +962,7 @@ predict.spectral_model <- function(
       mf <- model.frame(oterms, newdata)
       newdata <- model.matrix(oterms, model.frame(mf, drop.unused.levels = TRUE))
     }
-    colnames(newdata) <- gsub(attr(oterms, "term.labels"), "", colnames(newdata))
+    colnames(newdata) <- gsub(attr(oterms, "term.labels"), "", colnames(newdata), fixed = TRUE)
 
     if (object$preprocess$device == "proxiscout") {
       hw_wavs <- range(get_proxiscout_wavenumbers())

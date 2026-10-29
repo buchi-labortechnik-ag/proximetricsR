@@ -87,6 +87,26 @@ test_that("Random dataset can be correctly exported and reimported", {
   expect_identical(attr(file_2_imported, "coeffs"), attr(rand_dat, "coeffs"))
 })
 
+test_that("Unsupported characters in property names are replaced when writing and reading", {
+  special_data <- proximateCannabis
+  colnames(special_data)[colnames(special_data) == "CBD"] <- "CBD (%)"
+  special_file <- paste0(path, "/special.tsv")
+  expect_message(
+    proximate_write_data(special_data, special_file, properties = c("CBDA", "CBD (%)")),
+    "'CBD (%)' -> 'CBD_(%)'",
+    fixed = TRUE
+  )
+  tsv_lines <- readLines(special_file)
+  expect_true("CBD_(%)" %in% strsplit(tsv_lines[1], "\t")[[1]])
+
+  # Unsupported characters added to a tsv by hand are replaced on import
+  tsv_lines[1] <- sub("\tCBDA\t", "\tCBDA??\t", tsv_lines[1], fixed = TRUE)
+  writeLines(tsv_lines, special_file)
+  expect_message(imported <- proximate_read_data(special_file), "'CBDA??' -> 'CBDA'", fixed = TRUE)
+  expect_true(all(c("CBDA", "CBD_(%)") %in% extract_property_names(imported)))
+  file.remove(special_file)
+})
+
 #################
 # SANITY CHECKS #
 #################

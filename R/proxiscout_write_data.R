@@ -109,8 +109,9 @@ proxiscout_write_data <- function(x, path, file_prefix = "proxiscout_export", pr
     clean_sample_col <- gsub(proxiscout_repetition_pattern(), "", sample_col)
     # Filter out any property that has only NA reference values
     property_df <- x[, properties, drop = FALSE]
+    colnames(property_df) <- clean_property_names(colnames(property_df))
     all_na_rows <- apply(property_df, 1, function(row) all(is.na(row)))
-    references_df <- data.frame("sampleName" = clean_sample_col, property_df)
+    references_df <- data.frame("sampleName" = clean_sample_col, property_df, check.names = FALSE)
     write.csv(
       unique(references_df[!all_na_rows, , drop = FALSE]), # Unique drops any duplicated rows
       file = file_paths[length(file_paths)],

@@ -350,6 +350,7 @@ plot.spectral_model <- function(
   }
 
   if (is.null(output_dir)) output_dir <- tempdir()
+  if (missing(output_file)) output_file <- clean_property_names(output_file, notify = FALSE)
   out_path <- file.path(output_dir, paste0(output_file, ".html"))
   html_fname <- paste0(output_file, ".html")
 
@@ -376,7 +377,7 @@ plot.spectral_model <- function(
     sample_group = sample_group,
     validation_group = validation_group,
     graph_params = list(...),
-    subtitle = paste0(x$target_variable, " - ", Sys.Date())
+    subtitle = paste0(clean_property_names(x$target_variable, notify = FALSE), " - ", Sys.Date())
   )
 
   # callr::r_bg() is used to run quarto_render() in a background R process,

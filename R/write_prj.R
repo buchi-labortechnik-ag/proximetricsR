@@ -162,7 +162,7 @@ write_prj <- function(object, path, tsv_paths = "", application_name = "Untitled
     .export = NULL
   ) %mydo% {
     model <- object[[ith]]
-    target_name <- model$target_variable
+    target_name <- clean_property_names(model$target_variable, notify = FALSE)
     proj_name <- paste0(application_name, ".", target_name, ".prj")
     save_dir <- paste0(path, proj_name)
     proj_name <- paste0(proj_name, '",#TRUE#,"","', dir_name)
@@ -187,11 +187,12 @@ write_prj <- function(object, path, tsv_paths = "", application_name = "Untitled
 
     # References, import all from data, not just passed models
     references <- tsv_data[, extract_property_names(tsv_data), drop = FALSE]
+    colnames(references) <- clean_property_names(colnames(references), notify = FALSE)
     # Create prj reference output for all models that are in any of the passed models.
     ref_output <- NULL
     for (i in seq_along(object)) {
       ref_model <- object[[i]]
-      ref_name <- ref_model$target_variable
+      ref_name <- clean_property_names(ref_model$target_variable, notify = FALSE)
       ref_logical <- paste0('",#', ref_name == target_name, '#,"Selector1","')
       if (is.null(ref_model$metadata)) {
         units <- ""
@@ -211,7 +212,7 @@ write_prj <- function(object, path, tsv_paths = "", application_name = "Untitled
       }
       if (ref_name == target_name) {
         ref_param <- paste(
-          ref_model$target_variable,
+          ref_name,
           floor(min(Y, na.rm = TRUE)),
           ceiling(max(Y, na.rm = TRUE)),
           paste0(decimals, units)
@@ -237,7 +238,7 @@ write_prj <- function(object, path, tsv_paths = "", application_name = "Untitled
       ref_output <- c(ref_output, ref_line)
     }
     #
-    all_target_names <- sapply(object, FUN = "[[", MARGIN = "target_variable")
+    all_target_names <- clean_property_names(sapply(object, FUN = "[[", MARGIN = "target_variable"), notify = FALSE)
     include_refs <- which(!colnames(references) %in% all_target_names)
     if (length(include_refs) > 0) {
       i <- 2

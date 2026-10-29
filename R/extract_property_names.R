@@ -99,3 +99,47 @@ extract_property_names <- function(x) {
   }
   return(character(0))
 }
+
+#' @title Clean property names
+#' @description
+#' Removes characters from property names that are not supported in file names
+#' on Windows (\code{\\ / : * ? " < > |}) or that break the formats of the
+#' written files (\code{; # , { } [ ]}, whitespace and control characters).
+#' Leading and trailing runs of these characters are dropped and all other runs
+#' are replaced by a single \code{"_"}, e.g. \code{"Fat (\%)"} becomes
+#' \code{"Fat_(\%)"}. Names without such characters are returned unchanged.
+#' @param x a character vector of property names.
+#' @param notify a logical. Should a message list the renamed properties?
+#' @return A character vector with the cleaned property names.
+#' @author Claudio Orellano
+#' @keywords internal
+#' @noRd
+clean_property_names <- function(x, notify = TRUE) {
+  invalid <- "[\\\\/:*?\"<>|;#,{}\\[\\][:space:][:cntrl:]]+"
+  cleaned <- gsub(paste0("^", invalid, "|", invalid, "$"), "", x, perl = TRUE)
+  cleaned <- gsub(invalid, "_", cleaned, perl = TRUE)
+  only_invalid <- cleaned %in% "" & !x %in% ""
+  if (any(only_invalid)) {
+    stop(
+      "The following property names only contain unsupported characters: ",
+      paste0("'", x[only_invalid], "'", collapse = ", ")
+    )
+  }
+  # Only names that were distinct before cleaning count as duplicates
+  new_dups <- duplicated(cleaned) & !duplicated(x)
+  if (any(new_dups)) {
+    dups <- unique(x[cleaned %in% cleaned[new_dups]])
+    stop(
+      "The following property names are no longer unique after removing unsupported characters: ",
+      paste0("'", dups, "'", collapse = ", "), ". Please rename them."
+    )
+  }
+  renamed <- !is.na(x) & cleaned != x
+  if (notify && any(renamed)) {
+    message(
+      "Renamed properties with unsupported characters: ",
+      paste0("'", x[renamed], "' -> '", cleaned[renamed], "'", collapse = ", ")
+    )
+  }
+  cleaned
+}
