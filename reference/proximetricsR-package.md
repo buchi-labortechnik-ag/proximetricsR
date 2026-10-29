@@ -134,7 +134,7 @@ Useful links:
 - <https://github.com/buchi-labortechnik-ag/proximetricsr/>
 
 - Report bugs at
-  <https://github.com/buchi-labortechnik-ag/proximetricsr/issues>
+  <https://github.com/buchi-labortechnik-ag/proximetricsR/issues>
 
 ## Author
 

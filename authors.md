@@ -20,7 +20,7 @@
 ## Citation
 
 Source:
-[`inst/CITATION`](https://github.com/buchi-labortechnik-ag/proximetricsr/blob/main/inst/CITATION)
+[`inst/CITATION`](https://github.com/buchi-labortechnik-ag/proximetricsR/blob/main/inst/CITATION)
 
 Ramirez-Lopez, L., Orellano, C., Cudlenco, N., Said, M., Abushosha, M.
 and Plans, M. (2026). proximetricsR: Spectral Preprocessing and

@@ -7,7 +7,7 @@ status](https://www.r-pkg.org/badges/version/proximetricsR?v=2.png)](https://CRA
 
 ![proximetricsR logo](./reference/figures/logo.png)
 
-*Last update: 2026-09-23*
+*Last update: 2026-10-19*
 
 Version: 0.7.2 – NewCastle
 

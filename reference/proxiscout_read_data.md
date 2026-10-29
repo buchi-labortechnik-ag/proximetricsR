@@ -42,11 +42,12 @@ A `data.frame` where:
 - A `.repetition_group` integer column is added, identifying rows that
   correspond to repeated scans of the same sample: for two-file input,
   rows merged to the same reference row share a group id; for
-  single-file input, groups are derived from the sample ID column's
+  single-file input, rows sharing the same sample ID, after removing the
   repetition suffix (see
   [`proxiscout_repetition_pattern`](https://buchi-labortechnik-ag.github.io/proximetricsR/reference/proxiscout_repetition_pattern.md)),
-  optionally disambiguated by scanner/device and date columns when
-  present. This column is meant for downstream aggregation of repeated
+  share a group id. In both cases, rows from different scanners/devices
+  (when such a column is present in `file`) are never grouped together.
+  This column is meant for downstream aggregation of repeated
   measurements and is not guaranteed to be meaningful if no ID-like
   column is found in the input. For two-file input, rows in `file` with
   no matching sample in `references_file` have `NA` reference columns;
