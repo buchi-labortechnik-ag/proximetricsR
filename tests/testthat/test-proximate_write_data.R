@@ -107,6 +107,13 @@ test_that("Unsupported characters in property names are replaced when writing an
   file.remove(special_file)
 })
 
+test_that("Reading a tsv with a header but no data rows gives an informative error", {
+  header_file <- paste0(path, "/header_only.tsv")
+  writeLines(readLines(filename, n = 1), header_file)
+  expect_error(proximate_read_data(header_file), "The tsv file contains a header but no data rows")
+  file.remove(header_file)
+})
+
 #################
 # SANITY CHECKS #
 #################
